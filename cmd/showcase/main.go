@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -22,12 +23,15 @@ import (
 	"github.com/sofiagros/gogpui/core/theme"
 )
 
-func main() {
-	const w, h = 800, 600
+const (
+	winW = 1200
+	winH = 860
+)
 
+func main() {
 	config := gogpu.DefaultConfig().
-		WithTitle("gogpui Components Showcase").
-		WithSize(w, h)
+		WithTitle("gogpui · Component Showcase").
+		WithSize(winW, winH)
 
 	app := gogpu.NewApp(config)
 
@@ -37,7 +41,7 @@ func main() {
 
 	app.OnSurfaceAvailable(func() {
 		lastScale = app.ScaleFactor()
-		canvas = ggcanvas.MustNewWithScale(app.GPUContextProvider(), w, h, lastScale)
+		canvas = ggcanvas.MustNewWithScale(app.GPUContextProvider(), winW, winH, lastScale)
 	})
 
 	var lastMx, lastMy float32
@@ -64,29 +68,24 @@ func main() {
 			}
 		}
 	})
+
 	lastTime := time.Now()
 
-	var sliderVal1 float64 = 0.3
-	var sliderVal2 float64 = 0.8
-
+	// --- コンポーネントの状態 ---
 	var chk1Val bool = false
 	var chk2Val bool = true
-	var chk3Val bool = false
-
 	var sw1Val bool = false
 	var sw2Val bool = true
-	var sw3Val bool = false
-
 	var rd1Val bool = false
 	var rd2Val bool = true
-	var rd3Val bool = false
+	var sliderVal1 float64 = 0.3
+	var sliderVal2 float64 = 0.7
 
 	app.OnDraw(func(dc *gogpu.Context) {
 		if canvas == nil {
 			return
 		}
 
-		// Calculate Delta Time
 		now := time.Now()
 		dt := now.Sub(lastTime).Seconds()
 		lastTime = now
@@ -99,32 +98,24 @@ func main() {
 		}
 		in := app.Input()
 
-		// Background
+		// 背景
 		ctx.SetColor(th.Colors.Background)
 		ctx.Clear()
 
-		// Load font to enable text rendering
+		// フォント読み込み
 		fontPath := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
 		source, err := text.NewFontSourceFromFile(fontPath)
 		if err == nil {
-			// Force enable 'kern' and 'liga' OpenType features
 			ctx.SetFont(source.Face(float64(th.FontSize),
+				text.WithHinting(text.HintingNone),
 				text.WithFeatures(text.NewFontFeature("kern", 1), text.NewFontFeature("liga", 1)),
 			))
 		} else {
 			log.Printf("Warning: Failed to load font from %s: %v", fontPath, err)
 		}
-
 		ctx.SetTextMode(gg.TextModeMSDF)
 
-		// Title
-		ctx.SetColor(th.Colors.Foreground)
-		ctx.DrawStringAnchored("gogpui Components Showcase", float64(w)/2, 15, 0.5, 0.5)
-
-		// Update UI Context with current frame's input and delta time
 		uictx.Update(ctx, th, dt, in, lastScale)
-
-		// Override volatile input state with buffered state
 		if pendingLeftPressed {
 			uictx.Mouse.LeftPressed = true
 			pendingLeftPressed = false
@@ -134,87 +125,167 @@ func main() {
 			pendingLeftReleased = false
 		}
 
-		// Draw buttons using Flexbox layout
-		btn1 := button.New("showcase-btn-primary").Label("Primary Button").Primary()
-		btn2 := button.New("showcase-btn-danger").Label("Danger Button").Danger()
-		btn3 := button.New("showcase-btn-link").Label("Link Button").Link()
+		// --- レイアウト定数 ---
+		const (
+			padX    = 24.0  // 左右マージン
+			padY    = 14.0  // 縦マージン
+			colGap  = 16.0  // 列間ギャップ
+			rowGap  = 16.0  // 行間ギャップ
+			titleH  = 44.0  // ヘッダー高さ
+			cardPad = 14.0  // カード内パディング
+			secH    = 22.0  // セクションタイトル行高さ
+			cardH1  = 182.0 // 1行目カード高さ
+			cardH2  = 200.0 // 2行目カード高さ
+		)
+		numCols := 4.0
+		colW := (float64(winW) - padX*2 - colGap*(numCols-1)) / numCols // ≈ 277px
 
-		chk1 := checkbox.New("showcase-chk-default").Label("Default Checkbox").Checked(chk1Val).OnChange(func(val bool) { chk1Val = val; println(" chk1 clicked:", val) })
-		chk2 := checkbox.New("showcase-chk-checked").Label("Checked Checkbox").Checked(chk2Val).OnChange(func(val bool) { chk2Val = val })
-		chk3 := checkbox.New("showcase-chk-disabled").Label("Disabled Checkbox").Checked(chk3Val).Disabled(true).OnChange(func(val bool) { chk3Val = val })
+		// ----- ヘッダー -----
+		ctx.SetColor(th.Colors.Foreground)
+		ctx.DrawStringAnchored("gogpui · Component Showcase", float64(winW)/2, titleH/2, 0.5, 0.5)
 
-		sw1 := switch_comp.New("showcase-sw-default").Label("Default Switch").Checked(sw1Val).OnChange(func(val bool) { sw1Val = val })
-		sw2 := switch_comp.New("showcase-sw-checked").Label("Checked Switch").Checked(sw2Val).OnChange(func(val bool) { sw2Val = val })
-		sw3 := switch_comp.New("showcase-sw-disabled").Label("Disabled Switch").Checked(sw3Val).Disabled(true).OnChange(func(val bool) { sw3Val = val })
+		// ヘッダー下の区切り線
+		ctx.SetColor(th.Colors.Border)
+		ctx.DrawRectangle(padX, titleH-1, float64(winW)-padX*2, 1)
+		ctx.Fill()
 
-		rd1 := radio.New("showcase-rd-default").Label("Default Radio").Checked(rd1Val).OnChange(func(val bool) { rd1Val = val })
-		rd2 := radio.New("showcase-rd-checked").Label("Checked Radio").Checked(rd2Val).OnChange(func(val bool) { rd2Val = val })
-		rd3 := radio.New("showcase-rd-disabled").Label("Disabled Radio").Checked(rd3Val).Disabled(true).OnChange(func(val bool) { rd3Val = val })
+		// ----- カード描画ヘルパー -----
+		// カード背景と左上のセクションタイトルを描画する
+		drawCard := func(x, y, w, h float64, title string) {
+			// カード背景
+			ctx.SetColor(th.Colors.Muted)
+			ctx.DrawRoundedRectangle(x, y, w, h, 8)
+			ctx.Fill()
+			// セクション名
+			ctx.SetColor(th.Colors.MutedForeground)
+			ctx.DrawString(title, x+cardPad, y+cardPad+float64(th.FontSize)*0.85)
+		}
 
-		sl1 := slider.New("showcase-sl-default").Value(sliderVal1).OnChange(func(val float64) { sliderVal1 = val })
-		sl2 := slider.New("showcase-sl-checked").Value(sliderVal2).OnChange(func(val float64) { sliderVal2 = val })
-		sl3 := slider.New("showcase-sl-disabled").Value(0.7).Disabled(true)
+		// ----- Row 1: Button / Checkbox / Switch / Radio -----
+		row1Y := titleH + padY
 
-		lbl1 := label.New("Normal Label")
-		lbl2 := label.New("Secondary Label").Secondary("with extra info")
-		lbl3 := label.New("Highlighted Label").Highlights("light", false)
-		lbl4 := label.New("Masked Secret").Masked(true)
-		lbl5 := label.New("Button Label").Masked(true)
-
-		bdg1 := badge.New().Count(5).Add(label.New("Messages"))
-		bdg2 := badge.New().Count(120).Max(99).Add(label.New("Notifications"))
-		bdg3 := badge.New().Dot().Add(label.New("Updates"))
-		bdg4 := badge.New().Count(3).Color(th.Colors.Info).Add(label.New("Info Badge"))
-		bdg5 := badge.New().Count(3).Color(th.Colors.Info).Add(button.New("showcase-btn-label").Label("Badge Button"))
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(10).
-			Add(btn1, btn2, btn3).
-			Render(uictx, 50, 50)
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(10).
-			Add(chk1, chk2, chk3).
-			Render(uictx, 300, 50)
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(10).
-			Add(sw1, sw2, sw3).
-			Render(uictx, 550, 50)
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(10).
-			Add(rd1, rd2, rd3).
-			Render(uictx, 50, 250)
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(10).
-			Add(sl1, sl2, sl3).
-			Render(uictx, 250, 250)
-
-		layout.NewFlex().
-			Direction(layout.Column).
-			Gap(20).
+		// Button
+		col0x := padX
+		drawCard(col0x, row1Y, colW, cardH1, "Button")
+		layout.NewFlex().Direction(layout.Column).Gap(8).
 			Add(
-				layout.NewFlex().Direction(layout.Column).Gap(10).Add(lbl1, lbl2, lbl3, lbl4, lbl5),
-				layout.NewFlex().Direction(layout.Column).Gap(20).Add(bdg1, bdg2, bdg3, bdg4, bdg5),
+				button.New("sc-btn-primary").Label("Primary Button").Primary(),
+				button.New("sc-btn-danger").Label("Danger Button").Danger(),
+				button.New("sc-btn-link").Label("Link Button").Link(),
 			).
-			Render(uictx, 550, 200)
+			Render(uictx, col0x+cardPad, row1Y+secH+cardPad)
 
-		// Render the gg canvas texture to the window
+		// Checkbox
+		col1x := padX + (colW + colGap)
+		drawCard(col1x, row1Y, colW, cardH1, "Checkbox")
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				checkbox.New("sc-chk1").Label("Unchecked").Checked(chk1Val).OnChange(func(v bool) { chk1Val = v }),
+				checkbox.New("sc-chk2").Label("Checked").Checked(chk2Val).OnChange(func(v bool) { chk2Val = v }),
+				checkbox.New("sc-chk3").Label("Disabled").Checked(false).Disabled(true),
+			).
+			Render(uictx, col1x+cardPad, row1Y+secH+cardPad)
+
+		// Switch
+		col2x := padX + (colW+colGap)*2
+		drawCard(col2x, row1Y, colW, cardH1, "Switch")
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				switch_comp.New("sc-sw1").Label("Off state").Checked(sw1Val).OnChange(func(v bool) { sw1Val = v }),
+				switch_comp.New("sc-sw2").Label("On state").Checked(sw2Val).OnChange(func(v bool) { sw2Val = v }),
+				switch_comp.New("sc-sw3").Label("Disabled").Checked(false).Disabled(true),
+			).
+			Render(uictx, col2x+cardPad, row1Y+secH+cardPad)
+
+		// Radio
+		col3x := padX + (colW+colGap)*3
+		drawCard(col3x, row1Y, colW, cardH1, "Radio")
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				radio.New("sc-rd1").Label("Unselected").Checked(rd1Val).OnChange(func(v bool) { rd1Val = v }),
+				radio.New("sc-rd2").Label("Selected").Checked(rd2Val).OnChange(func(v bool) { rd2Val = v }),
+				radio.New("sc-rd3").Label("Disabled").Checked(false).Disabled(true),
+			).
+			Render(uictx, col3x+cardPad, row1Y+secH+cardPad)
+
+		// ----- Row 2: Slider / Label / Badge / Layout Demo -----
+		row2Y := row1Y + cardH1 + rowGap
+
+		// Slider
+		drawCard(col0x, row2Y, colW, cardH2, "Slider")
+		layout.NewFlex().Direction(layout.Column).Gap(14).
+			Add(
+				slider.New("sc-sl1").Value(sliderVal1).OnChange(func(v float64) { sliderVal1 = v }),
+				slider.New("sc-sl2").Value(sliderVal2).OnChange(func(v float64) { sliderVal2 = v }),
+				slider.New("sc-sl3").Value(0.5).Disabled(true),
+			).
+			Render(uictx, col0x+cardPad, row2Y+secH+cardPad)
+
+		// Label
+		drawCard(col1x, row2Y, colW, cardH2, "Label")
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				label.New("Normal label"),
+				label.New("With secondary").Secondary("extra info"),
+				label.New("Highlighted text").Highlights("igh", false),
+				label.New("Masked content").Masked(true),
+			).
+			Render(uictx, col1x+cardPad, row2Y+secH+cardPad)
+
+		// Badge
+		drawCard(col2x, row2Y, colW, cardH2, "Badge")
+		layout.NewFlex().Direction(layout.Column).Gap(12).
+			Add(
+				badge.New().Count(5).Add(label.New("Messages")),
+				badge.New().Count(120).Max(99).Add(label.New("Capped at 99+")),
+				badge.New().Dot().Add(label.New("Dot variant")),
+				badge.New().Count(3).Color(th.Colors.Info).Add(label.New("Info color")),
+			).
+			Render(uictx, col2x+cardPad, row2Y+secH+cardPad)
+
+		// Layout Demo (Flex + Grid + Spacer + Padding)
+		drawCard(col3x, row2Y, colW, cardH2, "Layout")
+		innerW := colW - cardPad*2
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				// Spacer: ラベルを左右に分ける
+				layout.NewFlex().Direction(layout.Row).
+					WithConstraints(innerW, 0).
+					Add(
+						label.New("Left"),
+						layout.NewSpacerFlex(),
+						label.New("Right"),
+					),
+				// Padding: ボタンに水平パディングを追加
+				layout.NewPadding(
+					button.New("sc-pad-btn").Label("Padded").Primary(),
+				).Horizontal(10).Vertical(2),
+				// Grid: 3列グリッドにボタン
+				layout.NewGrid().Cols(3).Gap(6).
+					Add(
+						button.New("sc-g1").Label("A").Primary(),
+						button.New("sc-g2").Label("B").Danger(),
+						button.New("sc-g3").Label("C").Link(),
+					),
+			).
+			Render(uictx, col3x+cardPad, row2Y+secH+cardPad)
+
+		// ----- フッター -----
+		row3Y := row2Y + cardH2 + rowGap
+		statusLine := fmt.Sprintf(
+			"Components: Button · Checkbox · Switch · Radio · Slider · Label · Badge     "+
+				"Layout: Flex · Grid · Spacer · Padding",
+		)
+		ctx.SetColor(th.Colors.MutedForeground)
+		ctx.DrawStringAnchored(statusLine, float64(winW)/2, row3Y+10, 0.5, 0.5)
+
+		// canvas → ウィンドウへ描画
 		canvas.MarkDirty()
 		err = canvas.RenderTo(dc.AsTextureDrawer())
 		if err != nil {
 			log.Printf("Failed to render canvas to screen: %v", err)
 		}
 
-		// Request a redraw ONLY if an animation is in progress.
-		// gogpu automatically calls OnDraw when window events (mouse, resize) occur!
 		if uictx.NeedsRedraw {
 			app.RequestRedraw()
 		}

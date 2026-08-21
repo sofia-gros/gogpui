@@ -21,6 +21,8 @@ Key properties:
 - **Dark / Light mode** — theme switching at runtime
 - **Fully tested** — golden-image diff tests + synthetic-input unit tests per component
 
+![img1](./docs/readme1.png)
+
 ---
 
 ## Installation
@@ -83,15 +85,15 @@ func main() {
 
 ## Components
 
-| Component  | Status | Variants / Notes |
-|------------|--------|------------------|
+| Component  | Status  | Variants / Notes                          |
+| ---------- | ------- | ----------------------------------------- |
 | `Button`   | ✅ Done | Primary · Danger · Link · Ghost · Outline |
-| `Checkbox` | ✅ Done | Default · Checked · Disabled |
-| `Switch`   | ✅ Done | Default · Checked · Disabled |
-| `Radio`    | ✅ Done | Default · Checked · Disabled |
-| `Slider`   | ✅ Done | Continuous · Disabled |
-| `Label`    | ✅ Done | Normal · Secondary · Highlights · Masked |
-| `Badge`    | ✅ Done | Count · Max cap · Dot · Custom color |
+| `Checkbox` | ✅ Done | Default · Checked · Disabled              |
+| `Switch`   | ✅ Done | Default · Checked · Disabled              |
+| `Radio`    | ✅ Done | Default · Checked · Disabled              |
+| `Slider`   | ✅ Done | Continuous · Disabled                     |
+| `Label`    | ✅ Done | Normal · Secondary · Highlights · Masked  |
+| `Badge`    | ✅ Done | Count · Max cap · Dot · Custom color      |
 
 > See [`PORTING_LEDGER.md`](./PORTING_LEDGER.md) for the full progress table and per-component API mapping to the Rust source.
 
@@ -205,6 +207,7 @@ Contributions are welcome. Before starting work on a new component, please read:
 2. [`PORTING_LEDGER.md`](./PORTING_LEDGER.md) — current component status and API correspondence table
 
 **Source of truth:**
+
 - Rust source: [`crates/ui/src`](https://github.com/longbridge/gpui-component/tree/main/crates/ui/src)
 - Live gallery (WASM): [longbridge.github.io/gpui-component](https://longbridge.github.io/gpui-component/)
 
