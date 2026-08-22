@@ -176,12 +176,17 @@ func (r *Radio) Render(uictx *context.UIContext, x, y float64) (float64, float64
 	}
 	centerY += yOffset
 
-	// Draw outer circle
+	// 外枠を描く。ストローク幅をスケール対応にして物理 1.5px を保証する。
+	// Windows 拡大表示(125%/150%)環境では 1 論理 px が見えないことがあるため。
+	lineW := 1.5 / uictx.Scale
+	if lineW < 1.0 {
+		lineW = 1.0
+	}
 	ctx.DrawCircle(centerX, centerY, circleRadius)
 	ctx.SetColor(th.Colors.Background)
 	ctx.FillPreserve()
 	ctx.SetColor(borderColor)
-	ctx.SetLineWidth(1.0)
+	ctx.SetLineWidth(lineW)
 	ctx.Stroke()
 
 	// Draw inner circle (dot) if checked

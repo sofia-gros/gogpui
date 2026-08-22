@@ -94,8 +94,10 @@ func DarkThemeColors() ThemeColor {
 		Info:           color.RGBA{R: 29, G: 78, B: 216, A: 255},     // blue-700
 		InfoForeground: color.RGBA{R: 250, G: 250, B: 250, A: 255},
 
-		Border: color.RGBA{R: 39, G: 39, B: 42, A: 255}, // hsl(240, 3.7%, 15.9%)
-		Input:  color.RGBA{R: 39, G: 39, B: 42, A: 255}, // hsl(240, 3.7%, 15.9%)
+		// Border/Input: zinc-600 (#52525b) — ダークモードで視認可能なボーダー色。
+		// 元の zinc-800 (#27272a) は背景 (#09090b) とのコントラストが低すぎてストロークが見えなかった。
+		Border: color.RGBA{R: 82, G: 82, B: 91, A: 255},  // zinc-600 #52525b
+		Input:  color.RGBA{R: 82, G: 82, B: 91, A: 255},  // zinc-600 #52525b
 		Ring:   color.RGBA{R: 212, G: 212, B: 216, A: 255}, // hsl(240, 4.9%, 83.9%)
 	}
 }

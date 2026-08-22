@@ -2,15 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"path/filepath"
-	"time"
 
-	"github.com/gogpu/gg"
-	"github.com/gogpu/gg/integration/ggcanvas"
-	"github.com/gogpu/gg/text"
-	"github.com/gogpu/gogpu"
-	"github.com/gogpu/gogpu/input"
+	gogpui "github.com/sofiagros/gogpui"
 	"github.com/sofiagros/gogpui/components/badge"
 	"github.com/sofiagros/gogpui/components/button"
 	"github.com/sofiagros/gogpui/components/checkbox"
@@ -20,7 +13,6 @@ import (
 	switch_comp "github.com/sofiagros/gogpui/components/switch"
 	"github.com/sofiagros/gogpui/core/context"
 	"github.com/sofiagros/gogpui/core/layout"
-	"github.com/sofiagros/gogpui/core/theme"
 )
 
 const (
@@ -29,61 +21,6 @@ const (
 )
 
 func main() {
-	// サブピクセルテキストメトリクスをグローバルに有効化する。
-	// これにより各文字の advance width がサブピクセル精度で山計され、文字間隔が平均になる。
-	// tester.go と同様にコンテキスト生成前に呼ぶ必要がある。
-	text.SetGlobalSubpixelCache(text.NewSubpixelCache(text.HighQualitySubpixelConfig()))
-
-	config := gogpu.DefaultConfig().
-		WithTitle("gogpui Component Showcase").
-		WithSize(winW, winH)
-
-	app := gogpu.NewApp(config)
-
-	var canvas *ggcanvas.Canvas
-	var lastScale float64
-	uictx := context.NewUIContext()
-
-	// フォントソースを一度だけロードする（毎フレーム再読み込みを防ぐ）。
-	// 毎フレーム再ロードすると MSDF アトラスが毎回初期化され、文字間隔が定になる。不安
-	fontPath := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
-	fontSource, fontLoadErr := text.NewFontSourceFromFile(fontPath)
-	if fontLoadErr != nil {
-		log.Printf("Warning: Failed to load font from %s: %v", fontPath, fontLoadErr)
-	}
-
-	app.OnSurfaceAvailable(func() {
-		lastScale = app.ScaleFactor()
-		canvas = ggcanvas.MustNewWithScale(app.GPUContextProvider(), winW, winH, lastScale)
-	})
-
-	var lastMx, lastMy float32
-	var lastLDown bool
-	var pendingLeftPressed bool
-	var pendingLeftReleased bool
-
-	app.OnUpdate(func(dt float64) {
-		in := app.Input()
-		if in != nil {
-			mx, my := in.Mouse().Position()
-			ld := in.Mouse().Pressed(input.MouseButtonLeft)
-
-			if in.Mouse().JustPressed(input.MouseButtonLeft) {
-				pendingLeftPressed = true
-			}
-			if in.Mouse().JustReleased(input.MouseButtonLeft) {
-				pendingLeftReleased = true
-			}
-
-			if mx != lastMx || my != lastMy || ld != lastLDown || pendingLeftPressed || pendingLeftReleased {
-				lastMx, lastMy, lastLDown = mx, my, ld
-				app.RequestRedraw()
-			}
-		}
-	})
-
-	lastTime := time.Now()
-
 	// --- コンポーネントの状態 ---
 	var chk1Val bool = false
 	var chk2Val bool = true
@@ -94,45 +31,15 @@ func main() {
 	var sliderVal1 float64 = 0.3
 	var sliderVal2 float64 = 0.7
 
-	app.OnDraw(func(dc *gogpu.Context) {
-		if canvas == nil {
-			return
-		}
+	app := gogpui.New(gogpui.Options{
+		Title:  "gogpui Component Showcase",
+		Width:  winW,
+		Height: winH,
+	})
 
-		now := time.Now()
-		dt := now.Sub(lastTime).Seconds()
-		lastTime = now
-
-		ctx := canvas.Context()
-		th := theme.DefaultTheme()
-		if app.DarkMode() {
-			th.Mode = theme.DarkMode
-			th.Colors = theme.DarkThemeColors()
-		}
-		in := app.Input()
-
-		// 背景
-		ctx.SetColor(th.Colors.Background)
-		ctx.Clear()
-
-		// フォントをセット（ソースは起動時に一度だけロード済み）。
-		if fontSource != nil {
-			ctx.SetFont(fontSource.Face(float64(th.FontSize),
-				text.WithHinting(text.HintingNone),
-				text.WithFeatures(text.NewFontFeature("kern", 1), text.NewFontFeature("liga", 1)),
-			))
-		}
-		ctx.SetTextMode(gg.TextModeVector)
-
-		uictx.Update(ctx, th, dt, in, lastScale)
-		if pendingLeftPressed {
-			uictx.Mouse.LeftPressed = true
-			pendingLeftPressed = false
-		}
-		if pendingLeftReleased {
-			uictx.Mouse.LeftReleased = true
-			pendingLeftReleased = false
-		}
+	app.Run(func(uictx *context.UIContext) {
+		th := uictx.Theme
+		ctx := uictx.GG
 
 		// --- レイアウト定数 ---
 		const (
@@ -147,11 +54,11 @@ func main() {
 			cardH2  = 200.0 // 2行目カード高さ
 		)
 		numCols := 4.0
-		colW := (float64(winW) - padX*2 - colGap*(numCols-1)) / numCols // ≈ 277px
+		colW := (float64(winW) - padX*2 - colGap*(numCols-1)) / numCols
 
 		// ----- ヘッダー -----
 		ctx.SetColor(th.Colors.Foreground)
-		ctx.DrawStringAnchored("gogpui · Component Showcase", float64(winW)/2, titleH/2, 0.5, 0.5)
+		ctx.DrawStringAnchored("gogpui Component Showcase", float64(winW)/2, titleH/2, 0.5, 0.5)
 
 		// ヘッダー下の区切り線
 		ctx.SetColor(th.Colors.Border)
@@ -159,13 +66,10 @@ func main() {
 		ctx.Fill()
 
 		// ----- カード描画ヘルパー -----
-		// カード背景と左上のセクションタイトルを描画する
 		drawCard := func(x, y, w, h float64, title string) {
-			// カード背景
 			ctx.SetColor(th.Colors.Muted)
 			ctx.DrawRoundedRectangle(x, y, w, h, 8)
 			ctx.Fill()
-			// セクション名
 			ctx.SetColor(th.Colors.MutedForeground)
 			ctx.DrawString(title, x+cardPad, y+cardPad+float64(th.FontSize)*0.85)
 		}
@@ -173,7 +77,6 @@ func main() {
 		// ----- Row 1: Button / Checkbox / Switch / Radio -----
 		row1Y := titleH + padY
 
-		// Button
 		col0x := padX
 		drawCard(col0x, row1Y, colW, cardH1, "Button")
 		layout.NewFlex().Direction(layout.Column).Gap(8).
@@ -184,7 +87,6 @@ func main() {
 			).
 			Render(uictx, col0x+cardPad, row1Y+secH+cardPad)
 
-		// Checkbox
 		col1x := padX + (colW + colGap)
 		drawCard(col1x, row1Y, colW, cardH1, "Checkbox")
 		layout.NewFlex().Direction(layout.Column).Gap(10).
@@ -195,7 +97,6 @@ func main() {
 			).
 			Render(uictx, col1x+cardPad, row1Y+secH+cardPad)
 
-		// Switch
 		col2x := padX + (colW+colGap)*2
 		drawCard(col2x, row1Y, colW, cardH1, "Switch")
 		layout.NewFlex().Direction(layout.Column).Gap(10).
@@ -206,7 +107,6 @@ func main() {
 			).
 			Render(uictx, col2x+cardPad, row1Y+secH+cardPad)
 
-		// Radio
 		col3x := padX + (colW+colGap)*3
 		drawCard(col3x, row1Y, colW, cardH1, "Radio")
 		layout.NewFlex().Direction(layout.Column).Gap(10).
@@ -220,7 +120,6 @@ func main() {
 		// ----- Row 2: Slider / Label / Badge / Layout Demo -----
 		row2Y := row1Y + cardH1 + rowGap
 
-		// Slider
 		drawCard(col0x, row2Y, colW, cardH2, "Slider")
 		layout.NewFlex().Direction(layout.Column).Gap(14).
 			Add(
@@ -230,7 +129,6 @@ func main() {
 			).
 			Render(uictx, col0x+cardPad, row2Y+secH+cardPad)
 
-		// Label
 		drawCard(col1x, row2Y, colW, cardH2, "Label")
 		layout.NewFlex().Direction(layout.Column).Gap(10).
 			Add(
@@ -241,7 +139,6 @@ func main() {
 			).
 			Render(uictx, col1x+cardPad, row2Y+secH+cardPad)
 
-		// Badge
 		drawCard(col2x, row2Y, colW, cardH2, "Badge")
 		layout.NewFlex().Direction(layout.Column).Gap(12).
 			Add(
@@ -252,24 +149,16 @@ func main() {
 			).
 			Render(uictx, col2x+cardPad, row2Y+secH+cardPad)
 
-		// Layout Demo (Flex + Grid + Spacer + Padding)
 		drawCard(col3x, row2Y, colW, cardH2, "Layout")
 		innerW := colW - cardPad*2
 		layout.NewFlex().Direction(layout.Column).Gap(10).
 			Add(
-				// Spacer: ラベルを左右に分ける
 				layout.NewFlex().Direction(layout.Row).
 					WithConstraints(innerW, 0).
-					Add(
-						label.New("Left"),
-						layout.NewSpacerFlex(),
-						label.New("Right"),
-					),
-				// Padding: ボタンに水平パディングを追加
+					Add(label.New("Left"), layout.NewSpacerFlex(), label.New("Right")),
 				layout.NewPadding(
 					button.New("sc-pad-btn").Label("Padded").Primary(),
 				).Horizontal(10).Vertical(2),
-				// Grid: 3列グリッドにボタン
 				layout.NewGrid().Cols(3).Gap(6).
 					Add(
 						button.New("sc-g1").Label("A").Primary(),
@@ -282,25 +171,10 @@ func main() {
 		// ----- フッター -----
 		row3Y := row2Y + cardH2 + rowGap
 		statusLine := fmt.Sprintf(
-			"Components: Button · Checkbox · Switch · Radio · Slider · Label · Badge     "+
-				"Layout: Flex · Grid · Spacer · Padding",
+			"Components: Button  Checkbox  Switch  Radio  Slider  Label  Badge" +
+				"     Layout: Flex  Grid  Spacer  Padding",
 		)
 		ctx.SetColor(th.Colors.MutedForeground)
 		ctx.DrawStringAnchored(statusLine, float64(winW)/2, row3Y+10, 0.5, 0.5)
-
-		// canvas → ウィンドウへ描画
-		canvas.MarkDirty()
-		if renderErr := canvas.RenderTo(dc.AsTextureDrawer()); renderErr != nil {
-			log.Printf("Failed to render canvas to screen: %v", renderErr)
-		}
-
-		if uictx.NeedsRedraw {
-			app.RequestRedraw()
-		}
 	})
-
-	log.Println("Starting gogpu window...")
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
-	}
 }

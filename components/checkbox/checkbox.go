@@ -196,11 +196,16 @@ func (c *Checkbox) Render(uictx *context.UIContext, x, y float64) (float64, floa
 	centerY += yOffset
 
 	// Draw Box
+	// ストローク幅をスケール対応にして物理 1.5px を保証する。
+	lineW := 1.5 / uictx.Scale
+	if lineW < 1.0 {
+		lineW = 1.0
+	}
 	ctx.DrawRoundedRectangle(x, boxY, boxSize, boxSize, radius)
 	ctx.SetColor(bgColor)
 	ctx.FillPreserve()
 	ctx.SetColor(borderColor)
-	ctx.SetLineWidth(1.0)
+	ctx.SetLineWidth(lineW)
 	ctx.Stroke()
 
 	// Draw Checkmark
