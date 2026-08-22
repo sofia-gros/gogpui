@@ -31,3 +31,4 @@ go.work.sum
 # .idea/
 # .vscode/
 **/testdata/golden/*.png
+gpui-component-rust/
