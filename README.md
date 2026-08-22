@@ -41,43 +41,32 @@ Requires Go 1.26+ and a WebGPU-capable GPU driver (via `github.com/gogpu/gogpu`)
 package main
 
 import (
-    "github.com/gogpu/gogpu"
-    "github.com/gogpu/gg/integration/ggcanvas"
+    gogpui "github.com/sofiagros/gogpui"
     "github.com/sofiagros/gogpui/components/button"
     "github.com/sofiagros/gogpui/core/context"
     "github.com/sofiagros/gogpui/core/layout"
-    "github.com/sofiagros/gogpui/core/theme"
 )
 
 func main() {
-    app := gogpu.NewApp(gogpu.DefaultConfig().WithTitle("My App").WithSize(800, 600))
-    uictx := context.NewUIContext()
-
-    var canvas *ggcanvas.Canvas
-    app.OnSurfaceAvailable(func() {
-        canvas = ggcanvas.MustNewWithScale(app.GPUContextProvider(), 800, 600, app.ScaleFactor())
+    app := gogpui.New(gogpui.Options{
+        Title:  "My App",
+        Width:  800,
+        Height: 600,
     })
 
-    app.OnDraw(func(dc *gogpu.Context) {
-        ctx := canvas.Context()
-        th := theme.DefaultTheme()
+    var clicked int
 
-        uictx.Update(ctx, th, dt, app.Input(), app.ScaleFactor())
-
-        // Declare components — they are rendered immediately
-        btn := button.New("my-button").Label("Click Me").Primary()
+    app.Run(func(uictx *context.UIContext) {
+        btn := button.New("my-button").
+            Label("Click Me").
+            Primary()
 
         layout.NewFlex().
             Direction(layout.Column).
             Gap(10).
             Add(btn).
             Render(uictx, 50, 50)
-
-        canvas.MarkDirty()
-        canvas.RenderTo(dc.AsTextureDrawer())
     })
-
-    app.Run()
 }
 ```
 
@@ -145,11 +134,27 @@ badge.New().Count(3).Color(th.Colors.Info).Add(label.New("Info"))
 ### Layout
 
 ```go
+// Flex — 行/列方向に並べる
 layout.NewFlex().
-    Direction(layout.Column).
+    Direction(layout.Column). // または layout.Row
     Gap(10).
     Add(btn1, btn2, btn3).
     Render(uictx, x, y)
+
+// Grid — 固定列数グリッド
+layout.NewGrid().Cols(3).Gap(8).
+    Add(a, b, c, d, e, f).
+    Render(uictx, x, y)
+
+// Spacer — 残りスペースを埋める (flex-grow 相当)
+layout.NewFlex().Direction(layout.Row).Add(
+    label.New("Left"),
+    layout.NewSpacerFlex(),   // ← ここが伸びる
+    label.New("Right"),
+)
+
+// Padding — 子ウィジェットに余白を追加
+layout.NewPadding(btn).Horizontal(12).Vertical(4)
 ```
 
 ---
@@ -158,7 +163,8 @@ layout.NewFlex().
 
 ```
 gogpui/
-├── components/          # UI components (button, checkbox, slider, …)
+├── gogpui.go            # App ラッパー — gogpu/gg を隠蔽するトップレベル API
+├── components/          # UI コンポーネント
 │   ├── button/
 │   ├── checkbox/
 │   ├── switch/
@@ -167,25 +173,29 @@ gogpui/
 │   ├── label/
 │   └── badge/
 ├── core/
-│   ├── context/         # UIContext — per-frame input & theme carrier
-│   ├── layout/          # Flexbox layout engine
-│   └── theme/           # Light / dark theme tokens
+│   ├── context/         # UIContext — フレームごとの入力・テーマキャリア
+│   ├── layout/          # Flex / Grid / Spacer / Padding レイアウトエンジン
+│   └── theme/           # ライト / ダークテーマトークン
 ├── assets/
-│   └── fonts/           # Inter typeface (MSDF rendering)
+│   └── fonts/           # Inter フォント (Vector / MSDF レンダリング)
 ├── cmd/
-│   └── showcase/        # Interactive component gallery (runnable demo)
+│   └── showcase/        # インタラクティブコンポーネントギャラリー
+├── testing/             # ゴールデンイメージ差分テスト用ヘルパー
 └── docs/
-    ├── porting-pattern.md   # GPUI → gogpu/gg concept mapping
-    └── PORTING_LEDGER.md    # Per-component progress & API mapping
+    ├── porting-pattern.md   # GPUI → gogpu/gg コンセプトマッピング
+    └── PORTING_LEDGER.md    # コンポーネント単位の進捗・API対応表
 ```
 
 ### Rendering Model
 
-gogpu/gg uses an **immediate-mode GPU rendering** pipeline — there is no retained widget tree, DOM, or CSS layout engine.
-Every frame, the full scene is re-issued as GPU draw calls.
+gogpui は **gogpu/gg の GPU 即時モードレンダリング** パイプライン上で動作します。
+リテインドウィジェットツリー・DOM・CSS レイアウトエンジンは存在せず、毎フレームフルシーンを GPU ドローコールとして再発行します。
 
-This has one important implication for overlay widgets (dropdowns, tooltips, popovers):
-**anchor coordinates must be recomputed every frame** — caching the position from the frame the overlay opened causes stale coordinates when the content scrolls.
+**ユーザーコードは `gogpu` や `ggcanvas` を直接インポートする必要はありません。**
+`gogpui.New` + `app.Run` がフォント・入力・キャンバスの初期化を一括して管理します。
+
+オーバーレイウィジェット（ドロップダウン、ツールチップ、ポップオーバー）を実装する際の注意:
+**アンカー座標は毎フレーム再計算する必要があります。** オーバーレイが開いたフレームの座標をキャッシュすると、スクロール時に座標がずれます。
 
 ---
 
