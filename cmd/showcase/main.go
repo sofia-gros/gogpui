@@ -29,8 +29,13 @@ const (
 )
 
 func main() {
+	// サブピクセルテキストメトリクスをグローバルに有効化する。
+	// これにより各文字の advance width がサブピクセル精度で山計され、文字間隔が平均になる。
+	// tester.go と同様にコンテキスト生成前に呼ぶ必要がある。
+	text.SetGlobalSubpixelCache(text.NewSubpixelCache(text.HighQualitySubpixelConfig()))
+
 	config := gogpu.DefaultConfig().
-		WithTitle("gogpui · Component Showcase").
+		WithTitle("gogpui Component Showcase").
 		WithSize(winW, winH)
 
 	app := gogpu.NewApp(config)
@@ -38,6 +43,14 @@ func main() {
 	var canvas *ggcanvas.Canvas
 	var lastScale float64
 	uictx := context.NewUIContext()
+
+	// フォントソースを一度だけロードする（毎フレーム再読み込みを防ぐ）。
+	// 毎フレーム再ロードすると MSDF アトラスが毎回初期化され、文字間隔が不安定になる。
+	fontPath := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
+	fontSource, fontLoadErr := text.NewFontSourceFromFile(fontPath)
+	if fontLoadErr != nil {
+		log.Printf("Warning: Failed to load font from %s: %v", fontPath, fontLoadErr)
+	}
 
 	app.OnSurfaceAvailable(func() {
 		lastScale = app.ScaleFactor()
@@ -102,18 +115,14 @@ func main() {
 		ctx.SetColor(th.Colors.Background)
 		ctx.Clear()
 
-		// フォント読み込み
-		fontPath := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
-		source, err := text.NewFontSourceFromFile(fontPath)
-		if err == nil {
-			ctx.SetFont(source.Face(float64(th.FontSize),
+		// フォントをセット（ソースは起動時に一度だけロード済み）。
+		if fontSource != nil {
+			ctx.SetFont(fontSource.Face(float64(th.FontSize),
 				text.WithHinting(text.HintingNone),
 				text.WithFeatures(text.NewFontFeature("kern", 1), text.NewFontFeature("liga", 1)),
 			))
-		} else {
-			log.Printf("Warning: Failed to load font from %s: %v", fontPath, err)
 		}
-		ctx.SetTextMode(gg.TextModeMSDF)
+		ctx.SetTextMode(gg.TextModeVector)
 
 		uictx.Update(ctx, th, dt, in, lastScale)
 		if pendingLeftPressed {
@@ -281,9 +290,8 @@ func main() {
 
 		// canvas → ウィンドウへ描画
 		canvas.MarkDirty()
-		err = canvas.RenderTo(dc.AsTextureDrawer())
-		if err != nil {
-			log.Printf("Failed to render canvas to screen: %v", err)
+		if renderErr := canvas.RenderTo(dc.AsTextureDrawer()); renderErr != nil {
+			log.Printf("Failed to render canvas to screen: %v", renderErr)
 		}
 
 		if uictx.NeedsRedraw {

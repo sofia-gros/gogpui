@@ -55,8 +55,9 @@ func NewTester() *Tester {
 		fmt.Printf("Warning: Failed to load font from %s: %v\n", fontPath, err)
 	}
 
-	// Use MSDF mode to avoid integer snap kerning gaps
-	ctx.SetTextMode(gg.TextModeMSDF)
+	// UI テキスト向けのベクターモードを使用する。
+	// TextModeMSDF はゲーム向けで、UI ラベルには TextModeVector が推奨（gg ドキュメント参照）。
+	ctx.SetTextMode(gg.TextModeVector)
 
 	uictx := context.NewUIContext()
 	uictx.Update(ctx, theme.DefaultTheme(), 0.016, nil, 1.0)
