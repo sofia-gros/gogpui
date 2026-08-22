@@ -45,7 +45,7 @@ func main() {
 	uictx := context.NewUIContext()
 
 	// フォントソースを一度だけロードする（毎フレーム再読み込みを防ぐ）。
-	// 毎フレーム再ロードすると MSDF アトラスが毎回初期化され、文字間隔が不安定になる。
+	// 毎フレーム再ロードすると MSDF アトラスが毎回初期化され、文字間隔が定になる。不安
 	fontPath := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
 	fontSource, fontLoadErr := text.NewFontSourceFromFile(fontPath)
 	if fontLoadErr != nil {
