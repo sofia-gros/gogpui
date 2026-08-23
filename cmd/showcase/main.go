@@ -15,12 +15,14 @@ import (
 	"github.com/sofiagros/gogpui/components/radio"
 	"github.com/sofiagros/gogpui/components/separator"
 	"github.com/sofiagros/gogpui/components/scroll"
+	"github.com/sofiagros/gogpui/components/debugoverlay"
 	"github.com/sofiagros/gogpui/components/tree"
 	"github.com/sofiagros/gogpui/components/skeleton"
 	"github.com/sofiagros/gogpui/components/slider"
 	switch_comp "github.com/sofiagros/gogpui/components/switch"
 	"github.com/sofiagros/gogpui/core/context"
 	"github.com/sofiagros/gogpui/core/layout"
+	"github.com/sofiagros/gogpui/core/theme"
 )
 
 const (
@@ -41,11 +43,15 @@ func main() {
 	isSkelOpen := false
 
 	demoTreeState := tree.NewTreeState().Items(
-		tree.NewItem("root1", "Root Folder").Expanded(true).Child(
-			tree.NewItem("file1", "File 1"),
+		tree.NewItem("root1", "RootProject").Expanded(true).Child(
+			tree.NewItem("folder1", "Folder").Child(
+				tree.NewItem("file1", "main.go").Suffix(label.New("M").Color(theme.DefaultTheme().Colors.Warning)),
+			),
 		).Child(
-			tree.NewItem("sub", "Subfolder").Child(
-				tree.NewItem("file2", "File 2"),
+			tree.NewItem("folder2", "Folder").Child(
+				tree.NewItem("folder3", "Folder").Child(
+					tree.NewItem("file2", "a.go").Suffix(label.New("M").Color(theme.DefaultTheme().Colors.Warning)),
+				),
 			),
 		),
 		tree.NewItem("root2", "Root 2 (Disabled)").Disabled(true),
@@ -56,6 +62,8 @@ func main() {
 		Width:  winW,
 		Height: winH,
 	})
+
+	overlay := debugoverlay.New()
 
 	app.Run(func(uictx *context.UIContext) {
 		th := uictx.Theme
@@ -261,71 +269,7 @@ func main() {
 					Render(uictx, col1x+cardPad, row4Y+secH+cardPad)
 
 				drawCard(col2x, row4Y, colW, cardH4, "Tree")
-				treeWidget := tree.New(demoTreeState).Item(func(ix int, entry tree.TreeEntry, state tree.TreeEntryState, uictx *context.UIContext) layout.Widget {
-					textColor := uictx.Theme.Colors.Foreground
-					if entry.Item.IsDisabled() {
-						textColor = uictx.Theme.Colors.MutedForeground
-					} else if state.Selected {
-						textColor = uictx.Theme.Colors.Primary
-					}
-
-					iconW := &layout.CustomWidget{
-						RenderFunc: func(c *context.UIContext, cx, cy float64) (float64, float64) {
-							if c.MeasureOnly { return 16, 16 }
-							ggCtx := c.GG
-							ggCtx.SetColor(textColor)
-							ggCtx.SetLineWidth(1.5)
-							if !entry.Item.IsFolder() {
-								// File icon
-								ggCtx.DrawRectangle(cx+3, cy+2, 10, 12)
-								ggCtx.Stroke()
-								ggCtx.MoveTo(cx+5, cy+5)
-								ggCtx.LineTo(cx+11, cy+5)
-								ggCtx.MoveTo(cx+5, cy+8)
-								ggCtx.LineTo(cx+11, cy+8)
-								ggCtx.Stroke()
-							} else {
-								if entry.Item.IsExpanded() {
-									// Open folder icon
-									ggCtx.MoveTo(cx+2, cy+3)
-									ggCtx.LineTo(cx+7, cy+3)
-									ggCtx.LineTo(cx+8, cy+5)
-									ggCtx.LineTo(cx+14, cy+5)
-									ggCtx.LineTo(cx+14, cy+13)
-									ggCtx.LineTo(cx+2, cy+13)
-									ggCtx.ClosePath()
-									ggCtx.Stroke()
-									// flap
-									ggCtx.MoveTo(cx+2, cy+13)
-									ggCtx.LineTo(cx+5, cy+7)
-									ggCtx.LineTo(cx+16, cy+7)
-									ggCtx.LineTo(cx+13, cy+13)
-									ggCtx.ClosePath()
-									ggCtx.Stroke()
-								} else {
-									// Closed folder icon
-									ggCtx.DrawRectangle(cx+2, cy+5, 12, 8)
-									ggCtx.MoveTo(cx+2, cy+5)
-									ggCtx.LineTo(cx+2, cy+3)
-									ggCtx.LineTo(cx+6, cy+3)
-									ggCtx.LineTo(cx+8, cy+5)
-									ggCtx.Stroke()
-								}
-							}
-							return 16, 16
-						},
-					}
-
-					lbl := label.New(entry.Item.Label()).Color(textColor)
-					padLeft := float64(entry.Depth) * 16.0
-					
-					row := layout.NewFlex().Direction(layout.Row).Gap(6)
-					if padLeft > 0 {
-						row.Add(layout.SpacerW(padLeft))
-					}
-					row.Add(iconW, lbl)
-					return row
-				})
+				treeWidget := tree.New(demoTreeState).Width(colW - cardPad*2)
 				treeWidget.Render(uictx, col2x+cardPad, row4Y+secH+cardPad)
 
 				rowFooterY := row4Y + cardH4 + rowGap
@@ -339,7 +283,10 @@ func main() {
 			},
 		}
 
-		scroll.New("main-scroll").Size(wW, wH).Child(contentWidget).Render(uictx, 0, 0)
+		scroll.New("main-scroll").Size(float64(wW), float64(wH)).Child(contentWidget).Render(uictx, 0, 0)
+
+		// デバッグオーバーレイを右上に描画
+		overlay.Render(uictx, float64(wW)-200.0, 10.0)
 	})
 }
 

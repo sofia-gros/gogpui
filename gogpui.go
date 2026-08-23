@@ -14,6 +14,8 @@ package gogpui
 
 import (
 	_ "embed"
+	"fmt"
+	"image"
 	"log"
 	"sync/atomic"
 	"time"
@@ -23,6 +25,7 @@ import (
 	"github.com/gogpu/gg/text"
 	"github.com/gogpu/gogpu"
 	"github.com/gogpu/gogpu/input"
+	"github.com/gogpu/gpucontext"
 	"github.com/sofiagros/gogpui/core/context"
 	"github.com/sofiagros/gogpui/core/theme"
 )
@@ -39,6 +42,8 @@ type Options struct {
 	// FontPath はフォントファイルへのパス。
 	// 未指定の場合はライブラリに組み込まれたデフォルトフォント(Inter)を使用する。
 	FontPath string
+	// Frameless はOSのウィンドウフレーム（タイトルバーや境界線）を非表示にするかどうかを指定する。
+	Frameless bool
 }
 
 // App は gogpui アプリケーションを表す。
@@ -67,13 +72,48 @@ func New(opts Options) *App {
 	return &App{opts: opts}
 }
 
+type gogpuWindowControl struct {
+	app   *gogpu.App
+	uictx *context.UIContext
+}
+
+func (wc *gogpuWindowControl) Minimize() {
+	if chrome, ok := any(wc.app).(gpucontext.WindowChrome); ok {
+		chrome.Minimize()
+	}
+}
+
+func (wc *gogpuWindowControl) Maximize() {
+	if chrome, ok := any(wc.app).(gpucontext.WindowChrome); ok {
+		chrome.Maximize()
+	}
+}
+
+func (wc *gogpuWindowControl) IsMaximized() bool {
+	if chrome, ok := any(wc.app).(gpucontext.WindowChrome); ok {
+		return chrome.IsMaximized()
+	}
+	return false
+}
+
+func (wc *gogpuWindowControl) Close() {
+	if chrome, ok := any(wc.app).(gpucontext.WindowChrome); ok {
+		chrome.Close()
+	}
+}
+
+func (wc *gogpuWindowControl) AddDragRegion(rect image.Rectangle) {
+	wc.uictx.AddDragRegion(rect)
+}
+
 // Run はウィンドウを起動し、毎フレーム onDraw を呼び出す。
 // onDraw は描画準備済みの *context.UIContext を受け取る。
 // gogpu / ggcanvas / gg などのインポートは不要。
 func (a *App) Run(onDraw func(*context.UIContext)) {
 	config := gogpu.DefaultConfig().
 		WithTitle(a.opts.Title).
-		WithSize(a.opts.Width, a.opts.Height)
+		WithSize(a.opts.Width, a.opts.Height).
+		WithFrameless(a.opts.Frameless)
 
 	app := gogpu.NewApp(config)
 
@@ -102,7 +142,24 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 	var currentW, currentH int
 	var lastScale float64
 
+	var cachedFace text.Face
+	var lastFontSize float32
+
 	uictx := context.NewUIContext()
+	uictx.Window = &gogpuWindowControl{app: app, uictx: uictx}
+
+	if chrome, ok := any(app).(gpucontext.WindowChrome); ok {
+		chrome.SetHitTestCallback(func(x, y float64) gpucontext.HitTestResult {
+			regions := uictx.GetDragRegions()
+			pt := image.Point{X: int(x), Y: int(y)}
+			for _, r := range regions {
+				if pt.In(r) {
+					return gpucontext.HitTestCaption
+				}
+			}
+			return gpucontext.HitTestClient
+		})
+	}
 
 	app.OnSurfaceAvailable(func() {
 		scale := app.ScaleFactor()
@@ -158,8 +215,6 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 
 	lastTime := time.Now()
 
-	var animToken *gogpu.AnimationToken
-
 	app.OnDraw(func(dc *gogpu.Context) {
 		if canvas == nil {
 			return
@@ -195,9 +250,6 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 			targetH.Store(int32(tgtH))
 		}
 		newScale := app.ScaleFactor()
-		if newScale <= 0 {
-			newScale = 1.0
-		}
 		targetScale.Store(newScale)
 
 		// --- リサイズ処理（レンダースレッド内で安全に適用）---
@@ -228,10 +280,14 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 
 		// フォントセット（ソースは起動時に一度だけロード済み）
 		if fontSource != nil {
-			ctx.SetFont(fontSource.Face(float64(th.FontSize),
-				text.WithHinting(text.HintingNone),
-				text.WithFeatures(text.NewFontFeature("kern", 1), text.NewFontFeature("liga", 1)),
-			))
+			if cachedFace == nil || th.FontSize != lastFontSize {
+				cachedFace = fontSource.Face(float64(th.FontSize),
+					text.WithHinting(text.HintingNone),
+					text.WithFeatures(text.NewFontFeature("kern", 1), text.NewFontFeature("liga", 1)),
+				)
+				lastFontSize = th.FontSize
+			}
+			ctx.SetFont(cachedFace)
 		}
 		// TextModeVector: UI ラベル・品質重視テキスト向け（gg ドキュメント推奨）
 		ctx.SetTextMode(gg.TextModeVector)
@@ -260,22 +316,16 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 		if onDraw != nil {
 			canvas.MarkDirty()
 		}
+		
 		if err := canvas.Render(dc.RenderTarget()); err != nil {
+			fmt.Println("gogpui: canvas.Render error:", err)
 			// 「gogpu: surface frame not available」などの過渡的エラー時は次フレームで確実に再試行する。
 			app.RequestRedraw()
 		}
 
 		// アニメーション実行中は gogpu に VSync フルレート描画を要求する。
 		if uictx.NeedsRedraw {
-			if animToken == nil {
-				animToken = app.StartAnimation()
-			}
 			app.RequestRedraw()
-		} else {
-			if animToken != nil {
-				animToken.Stop()
-				animToken = nil
-			}
 		}
 	})
 

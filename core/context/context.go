@@ -1,10 +1,22 @@
 package context
 
 import (
+	"image"
+	"sync"
+
 	"github.com/gogpu/gg"
 	"github.com/gogpu/gogpu/input"
 	"github.com/sofiagros/gogpui/core/theme"
 )
+
+// WindowControl はUIコンポーネントからOSのウィンドウ操作を行うためのインターフェースです。
+type WindowControl interface {
+	Minimize()
+	Maximize()
+	IsMaximized() bool
+	Close()
+	AddDragRegion(rect image.Rectangle)
+}
 
 // MouseState abstracts the mouse input for UI components.
 type MouseState struct {
@@ -44,6 +56,13 @@ type UIContext struct {
 	States       map[string]*WidgetState
 	MeasureOnly  bool
 	NeedsRedraw  bool
+	
+	// Window はOSウィンドウへの操作を提供します。
+	Window WindowControl
+	
+	// dragRegions は今フレームで登録されたドラッグ可能領域のリスト
+	dragRegions []image.Rectangle
+	dragMu      sync.RWMutex
 }
 
 // NewUIContext creates a new UIContext.
@@ -65,6 +84,10 @@ func (c *UIContext) Update(ggCtx *gg.Context, th *theme.Theme, dt float64, in *i
 	c.WindowHeight = windowH
 	c.MeasureOnly = false // デフォルトは描画モード
 	c.NeedsRedraw = false // フレーム開始時にリセット
+	
+	c.dragMu.Lock()
+	c.dragRegions = c.dragRegions[:0] // フレーム開始時にドラッグ領域をリセット
+	c.dragMu.Unlock()
 
 	if in != nil {
 		mx, my := in.Mouse().Position()
@@ -155,4 +178,21 @@ func (c *UIContext) ProcessInteraction(id string, x, y, w, h float64, disabled b
 	state.ActiveRatio = c.Animate(state.ActiveRatio, targetActive, 15.0)
 
 	return isHovered, isActive, isClicked
+}
+
+// GetDragRegions は登録されたドラッグ可能領域のリストを返します。
+// これは gogpui のメインループがOSのHitTestに対応するために使用します。
+func (c *UIContext) GetDragRegions() []image.Rectangle {
+	c.dragMu.RLock()
+	defer c.dragMu.RUnlock()
+	res := make([]image.Rectangle, len(c.dragRegions))
+	copy(res, c.dragRegions)
+	return res
+}
+
+// AddDragRegion は内部メソッドとして WindowControl の実装から呼び出されます。
+func (c *UIContext) AddDragRegion(rect image.Rectangle) {
+	c.dragMu.Lock()
+	defer c.dragMu.Unlock()
+	c.dragRegions = append(c.dragRegions, rect)
 }

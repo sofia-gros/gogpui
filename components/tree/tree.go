@@ -3,6 +3,8 @@ package tree
 import (
 	"fmt"
 
+	"github.com/sofiagros/gogpui/components/icon"
+	"github.com/sofiagros/gogpui/components/label"
 	"github.com/sofiagros/gogpui/core/context"
 	"github.com/sofiagros/gogpui/core/layout"
 )
@@ -15,18 +17,77 @@ type Tree struct {
 	id         string
 	state      *TreeState
 	renderItem RenderItemFunc
+	iconTheme  icon.IconTheme
+	width      float64
 }
 
 // New は新しい Tree ウィジェットを作成する。
 func New(state *TreeState) *Tree {
 	id := fmt.Sprintf("tree-%p", state)
-	return &Tree{
+	t := &Tree{
 		id:    id,
 		state: state,
-		renderItem: func(ix int, entry TreeEntry, state TreeEntryState, uictx *context.UIContext) layout.Widget {
-			return layout.NewFlex()
-		},
 	}
+
+	t.renderItem = func(ix int, entry TreeEntry, entryState TreeEntryState, uictx *context.UIContext) layout.Widget {
+		textColor := uictx.Theme.Colors.Foreground
+		if entry.Item.IsDisabled() {
+			textColor = uictx.Theme.Colors.MutedForeground
+		} else if entryState.Selected {
+			textColor = uictx.Theme.Colors.Primary
+		}
+		
+		if entry.Item.textColor != nil {
+			textColor = entry.Item.textColor
+		}
+
+		var iconName icon.Name
+		if !entry.Item.IsFolder() {
+			iconName = icon.File
+		} else if entry.Item.IsExpanded() {
+			iconName = icon.FolderOpen
+		} else {
+			iconName = icon.FolderClosed
+		}
+
+		iconWidget := icon.New(iconName).Color(textColor)
+		if t.iconTheme != nil {
+			iconWidget.Theme(t.iconTheme)
+		}
+
+		lbl := label.New(entry.Item.Label()).Color(textColor)
+		padLeft := float64(entry.Depth) * 16.0
+
+		row := layout.NewFlex().Direction(layout.Row).Gap(6)
+		if t.width > 0 {
+			row.WithConstraints(t.width, 0)
+		}
+		
+		if padLeft > 0 {
+			row.Add(layout.SpacerW(padLeft))
+		}
+		row.Add(iconWidget, lbl)
+
+		if entry.Item.suffix != nil {
+			row.Add(layout.NewSpacerFlex(), entry.Item.suffix)
+		}
+
+		return row
+	}
+
+	return t
+}
+
+// IconTheme はツリー内で使用するアイコンのテーマを設定します。
+func (t *Tree) IconTheme(theme icon.IconTheme) *Tree {
+	t.iconTheme = theme
+	return t
+}
+
+// Width はツリーの横幅を設定します。これにより、アイテム内の右端（Suffix）配置が正しく機能します。
+func (t *Tree) Width(w float64) *Tree {
+	t.width = w
+	return t
 }
 
 // Item は各可視エントリのアプリケーション固有のコンテンツを提供する。

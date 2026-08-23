@@ -1,5 +1,11 @@
 package tree
 
+import (
+	"image/color"
+
+	"github.com/sofiagros/gogpui/core/layout"
+)
+
 // TreeItemState は TreeItem の展開・無効状態を保持する。
 type TreeItemState struct {
 	expanded bool
@@ -8,10 +14,12 @@ type TreeItemState struct {
 
 // TreeItem は安定した ID、表示ラベル、子要素、および状態を持つツリーアイテムを表す。
 type TreeItem struct {
-	id       string
-	label    string
-	children []*TreeItem
-	state    *TreeItemState
+	id        string
+	label     string
+	children  []*TreeItem
+	state     *TreeItemState
+	textColor color.Color
+	suffix    layout.Widget
 }
 
 // NewItem は新しい TreeItem を作成する。
@@ -48,6 +56,18 @@ func (i *TreeItem) Expanded(expanded bool) *TreeItem {
 // Disabled は無効状態を設定し、自身を返す。
 func (i *TreeItem) Disabled(disabled bool) *TreeItem {
 	i.state.disabled = disabled
+	return i
+}
+
+// TextColor はアイテムのテキストとアイコンの色を設定し、自身を返す。
+func (i *TreeItem) TextColor(c color.Color) *TreeItem {
+	i.textColor = c
+	return i
+}
+
+// Suffix はアイテムの右端に表示するウィジェットを設定し、自身を返す。
+func (i *TreeItem) Suffix(w layout.Widget) *TreeItem {
+	i.suffix = w
 	return i
 }
 
