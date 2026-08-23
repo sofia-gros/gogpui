@@ -10,7 +10,7 @@
 | Button | ✅ Done | `components/button` | - |
 | Card | ⬜️ Todo | - | - |
 | Checkbox | ✅ Done | `components/checkbox`| - |
-| Collapsible|⬜️ Todo | - | - |
+| Collapsible| ✅ Done | `components/collapsible`| `crates/ui/src/collapsible.rs` 移植完了 |
 | Combobox | ⬜️ Todo | - | - |
 | Label | ✅ Done | `components/label` | - |
 | Progress | ✅ Done | `components/progress`| 修正完了 (アニメーション/見た目) |

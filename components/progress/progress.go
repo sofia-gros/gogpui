@@ -149,14 +149,21 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 		endX := x + end*w
 		indicatorW := endX - startX
 		if indicatorW > 0 {
-			ctx.Push()
-			ctx.DrawRoundedRectangle(x, y, w, barH, radius)
-			ctx.Clip()
-
 			// loading中は常に両端角丸 (rounded_r_noneしない)
-			ctx.DrawRoundedRectangle(startX, y, indicatorW, barH, radius)
+			// ただし幅が radius*2 より小さい場合は、はみ出さないように調整するか、
+			// 簡単のために indicatorW を radius*2 以上にする
+			drawW := indicatorW
+			if drawW < radius*2 {
+				drawW = radius * 2
+			}
+			// startX も調整
+			drawX := startX
+			if drawX+drawW > x+w {
+				drawX = x + w - drawW
+			}
+
+			ctx.DrawRoundedRectangle(drawX, y, drawW, barH, radius)
 			_ = ctx.Fill()
-			ctx.Pop()
 		}
 	} else {
 		state := uictx.GetState(p.id)
@@ -166,19 +173,26 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 			if indicatorW > w {
 				indicatorW = w
 			}
-			ctx.Push()
-			ctx.DrawRoundedRectangle(x, y, w, barH, radius)
-			ctx.Clip()
 
 			if state.ValueRatio >= 100.0 {
 				// 100%時は両端角丸
 				ctx.DrawRoundedRectangle(x, y, indicatorW, barH, radius)
 			} else {
 				// 100%未満の場合は右端を角丸にしない (rounded_r_none)
-				ctx.DrawRectangle(x, y, indicatorW, barH)
+				if indicatorW <= radius {
+					// 進行度が極端に小さい場合 (radius以下) は単なる矩形でごまかすか、Clipの代わりに描画範囲を絞る
+					ctx.DrawRectangle(x, y, indicatorW, barH)
+				} else {
+					ctx.MoveTo(x+radius, y)
+					ctx.LineTo(x+indicatorW, y)
+					ctx.LineTo(x+indicatorW, y+barH)
+					ctx.LineTo(x+radius, y+barH)
+					ctx.DrawArc(x+radius, y+barH-radius, radius, math.Pi/2, math.Pi)
+					ctx.DrawArc(x+radius, y+radius, radius, math.Pi, 3*math.Pi/2)
+					ctx.ClosePath()
+				}
 			}
 			_ = ctx.Fill()
-			ctx.Pop()
 		}
 	}
 

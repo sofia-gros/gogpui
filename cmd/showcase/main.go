@@ -9,6 +9,7 @@ import (
 	"github.com/sofiagros/gogpui/components/breadcrumb"
 	"github.com/sofiagros/gogpui/components/button"
 	"github.com/sofiagros/gogpui/components/checkbox"
+	"github.com/sofiagros/gogpui/components/collapsible"
 	"github.com/sofiagros/gogpui/components/label"
 	"github.com/sofiagros/gogpui/components/progress"
 	"github.com/sofiagros/gogpui/components/radio"
@@ -22,7 +23,7 @@ import (
 
 const (
 	winW = 1200
-	winH = 920
+	winH = 1000
 )
 
 func main() {
@@ -35,6 +36,7 @@ func main() {
 	var rd2Val bool = true
 	var sliderVal1 float64 = 0.3
 	var sliderVal2 float64 = 0.7
+	isSkelOpen := false
 
 	app := gogpui.New(gogpui.Options{
 		Title:  "gogpui Component Showcase",
@@ -223,9 +225,9 @@ func main() {
 			).
 			Render(uictx, col3x+cardPad, row3Y+secH+cardPad)
 
-		// ----- Row 4: Avatar -----
+		// ----- Row 4: Avatar & Collapsible -----
 		row4Y := row3Y + cardH3 + rowGap
-		cardH4 := 130.0
+		cardH4 := 180.0
 		
 		drawCard(col0x, row4Y, colW, cardH4, "Avatar")
 		layout.NewFlex().Direction(layout.Row).Gap(15).
@@ -238,10 +240,32 @@ func main() {
 			).
 			Render(uictx, col0x+cardPad, row4Y+secH+cardPad)
 
+		// Collapsible カード
+		drawCard(col1x, row4Y, colW, cardH4, "Collapsible")
+
+		toggleBtn := button.New("toggle-col").
+			Ghost().
+			Label("Toggle Details").
+			OnClick(func() {
+				isSkelOpen = !isSkelOpen
+			})
+
+		skelContent := layout.NewFlex().Direction(layout.Column).Gap(5).Add(
+			skeleton.New("skel1").Width(150).Height(12),
+			skeleton.New("skel2").Width(120).Height(12),
+			skeleton.New("skel3").Width(180).Height(12),
+		)
+
+		collapsible.New().
+			Open(isSkelOpen).
+			Trigger(toggleBtn).
+			Content(skelContent).
+			Render(uictx, col1x+cardPad, row4Y+secH+cardPad)
+
 		// ----- フッター -----
 		rowFooterY := row4Y + cardH4 + rowGap
 		statusLine := fmt.Sprintf(
-			"Components: Button  Checkbox  Switch  Radio  Slider  Label  Badge  Separator  Progress  Skeleton  Breadcrumb  Avatar" +
+			"Components: Button  Checkbox  Switch  Radio  Slider  Label  Badge  Separator  Progress  Skeleton  Breadcrumb  Avatar  Collapsible" +
 				"     Layout: Flex  Grid  Spacer  Padding",
 		)
 		ctx.SetColor(th.Colors.MutedForeground)
