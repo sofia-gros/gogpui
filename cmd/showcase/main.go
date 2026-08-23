@@ -4,11 +4,16 @@ import (
 	"fmt"
 
 	gogpui "github.com/sofiagros/gogpui"
+	"github.com/sofiagros/gogpui/components/avatar"
 	"github.com/sofiagros/gogpui/components/badge"
+	"github.com/sofiagros/gogpui/components/breadcrumb"
 	"github.com/sofiagros/gogpui/components/button"
 	"github.com/sofiagros/gogpui/components/checkbox"
 	"github.com/sofiagros/gogpui/components/label"
+	"github.com/sofiagros/gogpui/components/progress"
 	"github.com/sofiagros/gogpui/components/radio"
+	"github.com/sofiagros/gogpui/components/separator"
+	"github.com/sofiagros/gogpui/components/skeleton"
 	"github.com/sofiagros/gogpui/components/slider"
 	switch_comp "github.com/sofiagros/gogpui/components/switch"
 	"github.com/sofiagros/gogpui/core/context"
@@ -17,7 +22,7 @@ import (
 
 const (
 	winW = 1200
-	winH = 860
+	winH = 920
 )
 
 func main() {
@@ -52,6 +57,7 @@ func main() {
 			secH    = 22.0  // セクションタイトル行高さ
 			cardH1  = 182.0 // 1行目カード高さ
 			cardH2  = 200.0 // 2行目カード高さ
+			cardH3  = 140.0 // 3行目カード高さ
 		)
 		// ウィンドウサイズは毎フレーム UIContext から取得しリサイズに自動追従する。
 		wW := uictx.WindowWidth
@@ -65,9 +71,7 @@ func main() {
 		ctx.DrawStringAnchored("gogpui Component Showcase", wW/2, titleH/2, 0.5, 0.5)
 
 		// ヘッダー下の区切り線
-		ctx.SetColor(th.Colors.Border)
-		ctx.DrawRectangle(padX, titleH-1, wW-padX*2, 1)
-		ctx.Fill()
+		separator.Horizontal().Length(wW - padX*2).Render(uictx, padX, titleH-1)
 
 		// ----- カード描画ヘルパー -----
 		drawCard := func(x, y, w, h float64, title string) {
@@ -121,7 +125,7 @@ func main() {
 			).
 			Render(uictx, col3x+cardPad, row1Y+secH+cardPad)
 
-		// ----- Row 2: Slider / Label / Badge / Layout Demo -----
+		// ----- Row 2: Slider / Label / Badge / Separator & Layout -----
 		row2Y := row1Y + cardH1 + rowGap
 
 		drawCard(col0x, row2Y, colW, cardH2, "Slider")
@@ -153,16 +157,15 @@ func main() {
 			).
 			Render(uictx, col2x+cardPad, row2Y+secH+cardPad)
 
-		drawCard(col3x, row2Y, colW, cardH2, "Layout")
+		drawCard(col3x, row2Y, colW, cardH2, "Separator & Layout")
 		innerW := colW - cardPad*2
 		layout.NewFlex().Direction(layout.Column).Gap(10).
 			Add(
 				layout.NewFlex().Direction(layout.Row).
 					WithConstraints(innerW, 0).
 					Add(label.New("Left"), layout.NewSpacerFlex(), label.New("Right")),
-				layout.NewPadding(
-					button.New("sc-pad-btn").Label("Padded").Primary(),
-				).Horizontal(10).Vertical(2),
+				separator.Horizontal().Length(innerW),
+				separator.HorizontalDashed().Label("OR").Length(innerW),
 				layout.NewGrid().Cols(3).Gap(6).
 					Add(
 						button.New("sc-g1").Label("A").Primary(),
@@ -172,13 +175,77 @@ func main() {
 			).
 			Render(uictx, col3x+cardPad, row2Y+secH+cardPad)
 
-		// ----- フッター -----
+		// ----- Row 3: Progress & ProgressCircle & Skeleton -----
+		
 		row3Y := row2Y + cardH2 + rowGap
+
+		drawCard(col0x, row3Y, colW, cardH3, "Progress (Linear)")
+		progW := colW - cardPad*2
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				progress.New("sc-prog-det").Value(sliderVal1 * 100).Width(progW),
+				progress.New("sc-prog-loading").Loading(true).Width(progW),
+				progress.New("sc-prog-sm").Value(75).Size(progress.SizeSmall).Width(progW).Color(th.Colors.Info),
+			).
+			Render(uictx, col0x+cardPad, row3Y+secH+cardPad)
+
+		drawCard(col1x, row3Y, colW, cardH3, "Progress (Circle)")
+		layout.NewFlex().Direction(layout.Row).Gap(10).
+			Add(
+				progress.NewCircle("sc-circ-det").Value(sliderVal1 * 100),
+				progress.NewCircle("sc-circ-load").Loading(true),
+				progress.NewCircle("sc-circ-lg").Value(85).Size(progress.SizeLarge).Color(th.Colors.Success),
+				progress.NewCircle("sc-circ-xs").Value(40).Size(progress.SizeXSmall).Color(th.Colors.Danger),
+			).
+			Render(uictx, col1x+cardPad, row3Y+secH+cardPad)
+
+		drawCard(col2x, row3Y, colW, cardH3, "Skeleton")
+		layout.NewFlex().Direction(layout.Column).Gap(10).
+			Add(
+				skeleton.New("sc-skel-1").Width(progW),
+				skeleton.New("sc-skel-2").Width(progW).Height(24),
+				skeleton.New("sc-skel-3").Width(progW).Secondary(true),
+			).
+			Render(uictx, col2x+cardPad, row3Y+secH+cardPad)
+
+		drawCard(col3x, row3Y, colW, cardH3, "Breadcrumb")
+		layout.NewFlex().Direction(layout.Column).Gap(16).
+			Add(
+				breadcrumb.New().Add(
+					breadcrumb.NewItem("sc-bc-1", "Home").OnClick(func() { fmt.Println("Breadcrumb Home clicked") }),
+					breadcrumb.NewItem("sc-bc-2", "Components"),
+				),
+				breadcrumb.New().Add(
+					breadcrumb.NewItem("sc-bc-3", "Home").OnClick(func() {}),
+					breadcrumb.NewItem("sc-bc-4", "Docs").OnClick(func() {}),
+					breadcrumb.NewItem("sc-bc-5", "Layout"),
+				),
+			).
+			Render(uictx, col3x+cardPad, row3Y+secH+cardPad)
+
+		// ----- Row 4: Avatar -----
+		row4Y := row3Y + cardH3 + rowGap
+		cardH4 := 130.0
+		
+		drawCard(col0x, row4Y, colW, cardH4, "Avatar")
+		layout.NewFlex().Direction(layout.Row).Gap(15).
+			Add(
+				avatar.New().Name("Jason Lee").Size(avatar.SizeLarge),
+				avatar.New().Name("foo bar"), // default Medium
+				avatar.New().Name("huacnlee").Size(avatar.SizeSmall),
+				avatar.New().Name("small a").Size(avatar.SizeXSmall),
+				avatar.New(), // Placeholder
+			).
+			Render(uictx, col0x+cardPad, row4Y+secH+cardPad)
+
+		// ----- フッター -----
+		rowFooterY := row4Y + cardH4 + rowGap
 		statusLine := fmt.Sprintf(
-			"Components: Button  Checkbox  Switch  Radio  Slider  Label  Badge" +
+			"Components: Button  Checkbox  Switch  Radio  Slider  Label  Badge  Separator  Progress  Skeleton  Breadcrumb  Avatar" +
 				"     Layout: Flex  Grid  Spacer  Padding",
 		)
 		ctx.SetColor(th.Colors.MutedForeground)
-		ctx.DrawStringAnchored(statusLine, wW/2, row3Y+10, 0.5, 0.5)
+		ctx.DrawStringAnchored(statusLine, wW/2, rowFooterY+10, 0.5, 0.5)
 	})
 }
+

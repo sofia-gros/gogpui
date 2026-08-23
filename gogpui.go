@@ -152,6 +152,8 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 
 	lastTime := time.Now()
 
+	var animToken *gogpu.AnimationToken
+
 	app.OnDraw(func(dc *gogpu.Context) {
 		if canvas == nil {
 			return
@@ -257,8 +259,17 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 			app.RequestRedraw()
 		}
 
+		// アニメーション実行中は gogpu に VSync フルレート描画を要求する。
 		if uictx.NeedsRedraw {
+			if animToken == nil {
+				animToken = app.StartAnimation()
+			}
 			app.RequestRedraw()
+		} else {
+			if animToken != nil {
+				animToken.Stop()
+				animToken = nil
+			}
 		}
 	})
 

@@ -21,6 +21,7 @@ type WidgetState struct {
 	HoverRatio   float64 // 0.0 to 1.0 for animations
 	ActiveRatio  float64 // 0.0 to 1.0 for animations
 	ToggleRatio  float64 // 0.0 to 1.0 for toggle animations
+	ValueRatio   float64 // 0.0 to 1.0 (or custom range) for progress/slider animations
 	IsDragging   bool
 }
 
