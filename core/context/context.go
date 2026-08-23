@@ -26,14 +26,20 @@ type WidgetState struct {
 
 // UIContext wraps gg.Context and provides immediate-mode UI state and input.
 type UIContext struct {
-	GG          *gg.Context
-	Theme       *theme.Theme
-	Mouse       MouseState
-	DeltaTime   float64
-	Scale       float64
-	States      map[string]*WidgetState
-	MeasureOnly bool
-	NeedsRedraw bool
+	GG           *gg.Context
+	Theme        *theme.Theme
+	Mouse        MouseState
+	DeltaTime    float64
+	Scale        float64
+	// WindowWidth は現在のウィンドウ論理幅（ピクセル）。
+	// リサイズ後に毎フレーム更新される。
+	WindowWidth  float64
+	// WindowHeight は現在のウィンドウ論理高さ（ピクセル）。
+	// リサイズ後に毎フレーム更新される。
+	WindowHeight float64
+	States       map[string]*WidgetState
+	MeasureOnly  bool
+	NeedsRedraw  bool
 }
 
 // NewUIContext creates a new UIContext.
@@ -44,25 +50,28 @@ func NewUIContext() *UIContext {
 	}
 }
 
-// Update prepares the UIContext for a new frame.
-func (c *UIContext) Update(ggCtx *gg.Context, th *theme.Theme, dt float64, in *input.State, scale float64) {
+// Update はフレーム開始時に UIContext を最新状態に更新する。
+// windowW / windowH は論理ピクセル単位のウィンドウサイズ（物理サイズ ÷ スケールファクタ）。
+func (c *UIContext) Update(ggCtx *gg.Context, th *theme.Theme, dt float64, in *input.State, scale float64, windowW, windowH float64) {
 	c.GG = ggCtx
 	c.Theme = th
 	c.DeltaTime = dt
 	c.Scale = scale
-	c.MeasureOnly = false // Default to false for the frame
-	c.NeedsRedraw = false // Reset at start of frame
+	c.WindowWidth = windowW
+	c.WindowHeight = windowH
+	c.MeasureOnly = false // デフォルトは描画モード
+	c.NeedsRedraw = false // フレーム開始時にリセット
 
 	if in != nil {
 		mx, my := in.Mouse().Position()
-		// Adjust for window scale factor so logical coordinates match ggcanvas
+		// ウィンドウのスケールファクタで割り、論理座標に変換する
 		c.Mouse.X = float64(mx) / scale
 		c.Mouse.Y = float64(my) / scale
 		c.Mouse.LeftDown = in.Mouse().Pressed(input.MouseButtonLeft)
 		c.Mouse.LeftPressed = in.Mouse().JustPressed(input.MouseButtonLeft)
 		c.Mouse.LeftReleased = in.Mouse().JustReleased(input.MouseButtonLeft)
 	} else {
-		// Used in tester.go where inputs might be mocked directly on MouseState
+		// tester.go など入力をモックで注入する場合は MouseState を直接更新する
 	}
 }
 

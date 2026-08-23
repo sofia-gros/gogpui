@@ -53,16 +53,20 @@ func main() {
 			cardH1  = 182.0 // 1行目カード高さ
 			cardH2  = 200.0 // 2行目カード高さ
 		)
+		// ウィンドウサイズは毎フレーム UIContext から取得しリサイズに自動追従する。
+		wW := uictx.WindowWidth
+		wH := uictx.WindowHeight
+		_ = wH // 現在未使用だが将来的なレイアウト制約用
 		numCols := 4.0
-		colW := (float64(winW) - padX*2 - colGap*(numCols-1)) / numCols
+		colW := (wW - padX*2 - colGap*(numCols-1)) / numCols
 
 		// ----- ヘッダー -----
 		ctx.SetColor(th.Colors.Foreground)
-		ctx.DrawStringAnchored("gogpui Component Showcase", float64(winW)/2, titleH/2, 0.5, 0.5)
+		ctx.DrawStringAnchored("gogpui Component Showcase", wW/2, titleH/2, 0.5, 0.5)
 
 		// ヘッダー下の区切り線
 		ctx.SetColor(th.Colors.Border)
-		ctx.DrawRectangle(padX, titleH-1, float64(winW)-padX*2, 1)
+		ctx.DrawRectangle(padX, titleH-1, wW-padX*2, 1)
 		ctx.Fill()
 
 		// ----- カード描画ヘルパー -----
@@ -175,6 +179,6 @@ func main() {
 				"     Layout: Flex  Grid  Spacer  Padding",
 		)
 		ctx.SetColor(th.Colors.MutedForeground)
-		ctx.DrawStringAnchored(statusLine, float64(winW)/2, row3Y+10, 0.5, 0.5)
+		ctx.DrawStringAnchored(statusLine, wW/2, row3Y+10, 0.5, 0.5)
 	})
 }

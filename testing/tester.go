@@ -60,7 +60,8 @@ func NewTester() *Tester {
 	ctx.SetTextMode(gg.TextModeVector)
 
 	uictx := context.NewUIContext()
-	uictx.Update(ctx, theme.DefaultTheme(), 0.016, nil, 1.0)
+	// windowW/windowH はテスト用キャンバスの論理サイズを渡す。
+	uictx.Update(ctx, theme.DefaultTheme(), 0.016, nil, 1.0, float64(w), float64(h))
 
 	return &Tester{
 		Width:  w,
