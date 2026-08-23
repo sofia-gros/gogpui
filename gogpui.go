@@ -13,8 +13,8 @@
 package gogpui
 
 import (
+	_ "embed"
 	"log"
-	"path/filepath"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +27,9 @@ import (
 	"github.com/sofiagros/gogpui/core/theme"
 )
 
+//go:embed assets/fonts/Inter-Regular.ttf
+var defaultFontData []byte
+
 // Options はアプリケーションウィンドウの設定を保持する。
 type Options struct {
 	// Title はウィンドウタイトルバーに表示される文字列。
@@ -34,7 +37,7 @@ type Options struct {
 	// Width / Height はウィンドウの論理ピクセルサイズ。デフォルトは 800x600。
 	Width, Height int
 	// FontPath はフォントファイルへのパス。
-	// 未指定の場合は "assets/fonts/Inter-Regular.ttf" を使用する。
+	// 未指定の場合はライブラリに組み込まれたデフォルトフォント(Inter)を使用する。
 	FontPath string
 }
 
@@ -56,9 +59,6 @@ func New(opts Options) *App {
 	if opts.Title == "" {
 		opts.Title = "gogpui App"
 	}
-	if opts.FontPath == "" {
-		opts.FontPath = filepath.Join("assets", "fonts", "Inter-Regular.ttf")
-	}
 
 	// サブピクセルテキストメトリクスを有効化する。
 	// コンテキスト生成前に呼ぶことが必須。
@@ -79,9 +79,15 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 
 	// フォントソースを一度だけ読み込む。
 	// 毎フレーム再読み込みすると MSDF/Vector アトラスが毎回初期化され文字間隔が不安定になる。
-	fontSource, fontLoadErr := text.NewFontSourceFromFile(a.opts.FontPath)
+	var fontSource *text.FontSource
+	var fontLoadErr error
+	if a.opts.FontPath == "" {
+		fontSource, fontLoadErr = text.NewFontSource(defaultFontData)
+	} else {
+		fontSource, fontLoadErr = text.NewFontSourceFromFile(a.opts.FontPath)
+	}
 	if fontLoadErr != nil {
-		log.Printf("gogpui: failed to load font from %s: %v", a.opts.FontPath, fontLoadErr)
+		log.Printf("gogpui: failed to load font: %v", fontLoadErr)
 	}
 
 	var canvas *ggcanvas.Canvas

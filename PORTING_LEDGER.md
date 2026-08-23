@@ -23,3 +23,4 @@
 | Spinner | ⬜️ Todo | - | Icon依存のため後回し |
 | StatusBar | ✅ Done | `components/statusbar`| `crates/ui/src/status_bar.rs` 移植完了 |
 | Switch | ✅ Done | `components/switch` | - |
+| Tree | ✅ Done | `components/tree` | `crates/ui/src/tree.rs`, `crates/base/src/tree.rs` 移植完了 |

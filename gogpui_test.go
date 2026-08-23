@@ -1,7 +1,6 @@
 package gogpui
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/gogpu/gg"
@@ -22,9 +21,8 @@ func TestNew(t *testing.T) {
 	if app.opts.Title != "gogpui App" {
 		t.Errorf("expected Title 'gogpui App', got %s", app.opts.Title)
 	}
-	expectedFont := filepath.Join("assets", "fonts", "Inter-Regular.ttf")
-	if app.opts.FontPath != expectedFont {
-		t.Errorf("expected FontPath %s, got %s", expectedFont, app.opts.FontPath)
+	if app.opts.FontPath != "" {
+		t.Errorf("expected empty FontPath by default, got %s", app.opts.FontPath)
 	}
 
 	// カスタムオプションのテスト

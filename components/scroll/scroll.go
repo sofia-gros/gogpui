@@ -96,7 +96,7 @@ func (s *Scroll) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	// Draw clipping region
 	ctx.Push()
 	ctx.DrawRectangle(x, y, s.width, s.height)
-	ctx.Clip()
+	if !(x == 0 && y == 0 && s.width == uictx.WindowWidth && s.height == uictx.WindowHeight) { ctx.Clip() }
 
 	// Translate context and adjust mouse for hit testing
 	ctx.Translate(0, -state.OffsetY)
