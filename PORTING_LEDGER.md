@@ -2,9 +2,11 @@
 
 | component | status | Go Package | Notes |
 |-----------|--------|------------|-------|
+| Component | Status | Target Path | Notes / Context |
+|---|---|---|---|
+| Alert | ✅ Done | `components/alert` | `crates/ui/src/alert.rs` 移植完了 |
 | Accordion | ⬜️ Todo | - | - |
-| Alert | ⬜️ Todo | - | - |
-| Avatar | ✅ Done | `components/avatar` | `crates/ui/src/avatar/avatar.rs` 移植完了 (画像フォールバック済) |
+| Avatar | ✅ Done | `components/avatar`| `crates/ui/src/avatar/avatar.rs` 移植完了 |
 | Badge | ✅ Done | `components/badge` | - |
 | Breadcrumb| ✅ Done | `components/breadcrumb` | `crates/ui/src/breadcrumb.rs` 移植完了 |
 | Button | ✅ Done | `components/button` | - |
@@ -19,4 +21,5 @@
 | Skeleton | ✅ Done | `components/skeleton`| `crates/ui/src/skeleton.rs` 移植完了 |
 | Slider | ✅ Done | `components/slider` | - |
 | Spinner | ⬜️ Todo | - | Icon依存のため後回し |
+| StatusBar | ✅ Done | `components/statusbar`| `crates/ui/src/status_bar.rs` 移植完了 |
 | Switch | ✅ Done | `components/switch` | - |

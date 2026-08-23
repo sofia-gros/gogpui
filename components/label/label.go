@@ -18,12 +18,19 @@ type Label struct {
 	masked     bool
 	highlights string
 	isPrefix   bool
+	textColor  *color.Color
 }
 
 func New(text string) *Label {
 	return &Label{
 		text: text,
 	}
+}
+
+// Color sets a custom color for the label text.
+func (l *Label) Color(c color.Color) *Label {
+	l.textColor = &c
+	return l
 }
 
 func (l *Label) Secondary(text string) *Label {
@@ -46,9 +53,14 @@ func (l *Label) Highlights(text string, isPrefix bool) *Label {
 func (l *Label) buildSegments(uictx *context.UIContext) []TextSegment {
 	var segments []TextSegment
 
+	baseColor := uictx.Theme.Colors.Foreground
+	if l.textColor != nil {
+		baseColor = *l.textColor
+	}
+
 	if l.masked {
 		maskStr := strings.Repeat("•", len([]rune(l.text)))
-		segments = append(segments, TextSegment{Text: maskStr, Color: uictx.Theme.Colors.Foreground})
+		segments = append(segments, TextSegment{Text: maskStr, Color: baseColor})
 		if l.secondary != "" {
 			maskSec := strings.Repeat("•", len([]rune(l.secondary)))
 			segments = append(segments, TextSegment{Text: " " + maskSec, Color: uictx.Theme.Colors.MutedForeground})
@@ -61,36 +73,36 @@ func (l *Label) buildSegments(uictx *context.UIContext) []TextSegment {
 		hlLower := strings.ToLower(l.highlights)
 		txtLower := strings.ToLower(l.text)
 
+		start := 0
 		if l.isPrefix {
 			if strings.HasPrefix(txtLower, hlLower) {
 				segments = append(segments, TextSegment{Text: l.text[:len(hlLower)], Color: uictx.Theme.Colors.Info})
 				if len(l.text) > len(hlLower) {
-					segments = append(segments, TextSegment{Text: l.text[len(hlLower):], Color: uictx.Theme.Colors.Foreground})
+					segments = append(segments, TextSegment{Text: l.text[len(hlLower):], Color: baseColor})
 				}
 			} else {
-				segments = append(segments, TextSegment{Text: l.text, Color: uictx.Theme.Colors.Foreground})
+				segments = append(segments, TextSegment{Text: l.text, Color: baseColor})
 			}
 		} else {
 			// Full matching (all occurrences)
-			start := 0
-			for {
+			for start < len(l.text) {
 				idx := strings.Index(txtLower[start:], hlLower)
 				if idx == -1 {
 					if start < len(l.text) {
-						segments = append(segments, TextSegment{Text: l.text[start:], Color: uictx.Theme.Colors.Foreground})
+						segments = append(segments, TextSegment{Text: l.text[start:], Color: baseColor})
 					}
 					break
 				}
 				realIdx := start + idx
 				if realIdx > start {
-					segments = append(segments, TextSegment{Text: l.text[start:realIdx], Color: uictx.Theme.Colors.Foreground})
+					segments = append(segments, TextSegment{Text: l.text[start:realIdx], Color: baseColor})
 				}
 				segments = append(segments, TextSegment{Text: l.text[realIdx : realIdx+len(hlLower)], Color: uictx.Theme.Colors.Info})
 				start = realIdx + len(hlLower)
 			}
 		}
 	} else {
-		segments = append(segments, TextSegment{Text: l.text, Color: uictx.Theme.Colors.Foreground})
+		segments = append(segments, TextSegment{Text: l.text, Color: baseColor})
 	}
 
 	// Add secondary text

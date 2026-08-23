@@ -4,6 +4,10 @@ import (
 	"fmt"
 
 	gogpui "github.com/sofiagros/gogpui"
+	"github.com/sofiagros/gogpui/components/alert"
+	"github.com/sofiagros/gogpui/components/collapsible"
+	"github.com/sofiagros/gogpui/components/scroll"
+	"github.com/sofiagros/gogpui/components/statusbar"
 	"github.com/sofiagros/gogpui/components/avatar"
 	"github.com/sofiagros/gogpui/components/badge"
 	"github.com/sofiagros/gogpui/components/breadcrumb"

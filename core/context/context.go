@@ -8,9 +8,11 @@ import (
 
 // MouseState abstracts the mouse input for UI components.
 type MouseState struct {
-	X, Y        float64
-	LeftDown    bool
-	LeftPressed bool // True only on the frame it was pressed
+	X, Y         float64
+	ScrollX      float64
+	ScrollY      float64
+	LeftDown     bool
+	LeftPressed  bool // True only on the frame it was pressed
 	LeftReleased bool // True only on the frame it was released
 }
 
@@ -22,6 +24,7 @@ type WidgetState struct {
 	ActiveRatio  float64 // 0.0 to 1.0 for animations
 	ToggleRatio  float64 // 0.0 to 1.0 for toggle animations
 	ValueRatio   float64 // 0.0 to 1.0 (or custom range) for progress/slider animations
+	OffsetY      float64 // Persistent scroll offset
 	IsDragging   bool
 }
 
@@ -71,6 +74,10 @@ func (c *UIContext) Update(ggCtx *gg.Context, th *theme.Theme, dt float64, in *i
 		c.Mouse.LeftDown = in.Mouse().Pressed(input.MouseButtonLeft)
 		c.Mouse.LeftPressed = in.Mouse().JustPressed(input.MouseButtonLeft)
 		c.Mouse.LeftReleased = in.Mouse().JustReleased(input.MouseButtonLeft)
+
+		sx, sy := in.Mouse().Scroll()
+		c.Mouse.ScrollX = float64(sx)
+		c.Mouse.ScrollY = float64(sy)
 	} else {
 		// tester.go など入力をモックで注入する場合は MouseState を直接更新する
 	}
