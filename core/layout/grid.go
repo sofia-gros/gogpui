@@ -167,7 +167,11 @@ func (g *Grid) Render(uictx *context.UIContext, x, y float64) (w, h float64) {
 		}
 		cx := x + colOffsets[col]
 		cy := y + rowOffsets[row]
-		child.Render(uictx, math.Round(cx), math.Round(cy))
+		rx, ry := math.Round(cx), math.Round(cy)
+		box := boxes[i]
+		if uictx.IsVisible(rx, ry, box.w, box.h) {
+			child.Render(uictx, rx, ry)
+		}
 	}
 
 	return totalW, totalH

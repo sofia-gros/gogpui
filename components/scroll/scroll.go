@@ -102,8 +102,13 @@ func (s *Scroll) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	ctx.Translate(0, -state.OffsetY)
 	uictx.Mouse.Y += state.OffsetY
 
+	// Push logical clip rect (shifted to content coordinates)
+	uictx.PushClip(x, y+state.OffsetY, s.width, s.height)
+
 	// Draw child
 	s.child.Render(uictx, x, y)
+
+	uictx.PopClip()
 
 	// Restore mouse and context
 	uictx.Mouse.Y -= state.OffsetY

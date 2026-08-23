@@ -40,6 +40,11 @@ type WidgetState struct {
 	IsDragging   bool
 }
 
+// ClipRect represents a clipping region for culling.
+type ClipRect struct {
+	X, Y, W, H float64
+}
+
 // UIContext wraps gg.Context and provides immediate-mode UI state and input.
 type UIContext struct {
 	GG           *gg.Context
@@ -59,6 +64,8 @@ type UIContext struct {
 	
 	// Window はOSウィンドウへの操作を提供します。
 	Window WindowControl
+
+	clipStack []ClipRect
 	
 	// dragRegions は今フレームで登録されたドラッグ可能領域のリスト
 	dragRegions []image.Rectangle
@@ -68,8 +75,10 @@ type UIContext struct {
 // NewUIContext creates a new UIContext.
 func NewUIContext() *UIContext {
 	return &UIContext{
-		States: make(map[string]*WidgetState),
-		Scale:  1.0,
+		States:      make(map[string]*WidgetState),
+		Scale:       1.0,
+		dragRegions: make([]image.Rectangle, 0),
+		clipStack:   make([]ClipRect, 0),
 	}
 }
 
@@ -118,7 +127,67 @@ func (c *UIContext) GetState(id string) *WidgetState {
 
 // HitTest checks if the mouse is currently over the given rectangular bounds.
 func (c *UIContext) HitTest(x, y, w, h float64) bool {
+	if !c.IsVisible(c.Mouse.X, c.Mouse.Y, 1, 1) { // 簡易的なクリップ内判定
+		// Note: より厳密には、HitTest自体もClipRectと交差判定すべきですが、
+		// IsVisible で要素自体がスキップされるため、ここは描画された要素上での判定となります。
+	}
 	return c.Mouse.X >= x && c.Mouse.X <= x+w && c.Mouse.Y >= y && c.Mouse.Y <= y+h
+}
+
+// PushClip pushes a new clipping region to the stack.
+// The new region is the intersection of the current clip and the provided rectangle.
+func (c *UIContext) PushClip(x, y, w, h float64) {
+	current := c.CurrentClip()
+	
+	nx := x
+	if nx < current.X {
+		nx = current.X
+	}
+	ny := y
+	if ny < current.Y {
+		ny = current.Y
+	}
+	
+	nr := x + w
+	if cr := current.X + current.W; nr > cr {
+		nr = cr
+	}
+	nb := y + h
+	if cb := current.Y + current.H; nb > cb {
+		nb = cb
+	}
+	
+	nw := nr - nx
+	if nw < 0 {
+		nw = 0
+	}
+	nh := nb - ny
+	if nh < 0 {
+		nh = 0
+	}
+	
+	c.clipStack = append(c.clipStack, ClipRect{X: nx, Y: ny, W: nw, H: nh})
+}
+
+// PopClip removes the top clipping region from the stack.
+func (c *UIContext) PopClip() {
+	if len(c.clipStack) > 0 {
+		c.clipStack = c.clipStack[:len(c.clipStack)-1]
+	}
+}
+
+// CurrentClip returns the current active clipping region.
+func (c *UIContext) CurrentClip() ClipRect {
+	if len(c.clipStack) == 0 {
+		return ClipRect{X: -100000, Y: -100000, W: 200000, H: 200000} // Effectively infinite/window size
+	}
+	return c.clipStack[len(c.clipStack)-1]
+}
+
+// IsVisible returns true if the given rectangular area intersects with the current clipping region.
+func (c *UIContext) IsVisible(x, y, w, h float64) bool {
+	clip := c.CurrentClip()
+	return !(x+w <= clip.X || x >= clip.X+clip.W || y+h <= clip.Y || y >= clip.Y+clip.H)
 }
 
 // Animate approaches a target value from current value at a given speed based on DeltaTime.

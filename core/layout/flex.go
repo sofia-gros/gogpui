@@ -346,7 +346,10 @@ func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float6
 			cursor += box.h + spacing
 		}
 
-		child.Render(uictx, math.Round(cx), math.Round(cy))
+		rx, ry := math.Round(cx), math.Round(cy)
+		if uictx.MeasureOnly || uictx.IsVisible(rx, ry, box.w, box.h) {
+			child.Render(uictx, rx, ry)
+		}
 	}
 
 	return w, h

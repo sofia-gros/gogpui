@@ -289,8 +289,8 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 			}
 			ctx.SetFont(cachedFace)
 		}
-		// TextModeVector: UI ラベル・品質重視テキスト向け（gg ドキュメント推奨）
-		ctx.SetTextMode(gg.TextModeVector)
+		// TextModeGlyphMask: GPUアトラスを用いたUIテキストの高速・高品質レンダリング
+		ctx.SetTextMode(gg.TextModeGlyphMask)
 
 		uictx.Update(ctx, th, dt, in, lastScale,
 			float64(currentW), float64(currentH))
