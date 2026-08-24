@@ -120,8 +120,8 @@ func (s *Skeleton) Render(uictx *context.UIContext, x, y float64) (float64, floa
 	radius := float64(th.Radius)
 
 	ctx.SetColor(colorNRGBA)
-	ctx.DrawRoundedRectangle(x, y, w, h, radius)
-	_ = ctx.Fill()
+	uictx.DrawRoundedRectangle(x, y, w, h, radius)
+	_ = uictx.Fill()
 
 	return w, h
 }

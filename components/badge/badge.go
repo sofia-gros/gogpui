@@ -94,9 +94,9 @@ func (b *Badge) Render(uictx *context.UIContext, x, y float64) (float64, float64
 			if b.count > b.max {
 				textStr = strconv.Itoa(b.max) + "+"
 			}
-			w, h := ctx.MeasureString(textStr)
+			w, h := uictx.MeasureText(textStr)
 			if h == 0 {
-				_, h = ctx.MeasureString("0")
+				_, h = uictx.MeasureText("0")
 			}
 			
 			px, py := 4.0, 2.0
@@ -141,13 +141,13 @@ func (b *Badge) Render(uictx *context.UIContext, x, y float64) (float64, float64
 
 	ctx.SetColor(bgColor)
 	radius := badgeH / 2.0
-	ctx.DrawRoundedRectangle(bx, by, badgeW, badgeH, radius)
-	ctx.Fill()
+	uictx.DrawRoundedRectangle(bx, by, badgeW, badgeH, radius)
+	uictx.Fill()
 
 	// Draw badge text
 	if b.variant == Number {
 		ctx.SetColor(color.White)
-		ctx.DrawStringAnchored(textStr, bx+badgeW/2.0, by+badgeH/2.0, 0.5, 0.5)
+		uictx.DrawStringAnchored(textStr, bx+badgeW/2.0, by+badgeH/2.0, 0.5, 0.5)
 	}
 
 	if b.child == nil {

@@ -84,14 +84,14 @@ func (d *DebugOverlay) Render(uictx *context.UIContext, x, y float64) (float64, 
 
 	// Draw Background (Semi-transparent black)
 	ctx.SetColor(color.RGBA{0, 0, 0, 200})
-	ctx.DrawRoundedRectangle(x, y, w, h, 6)
-	ctx.Fill()
+	uictx.DrawRoundedRectangle(x, y, w, h, 6)
+	uictx.Fill()
 
 	// Draw Border
 	ctx.SetColor(color.RGBA{80, 80, 80, 255})
 	ctx.SetLineWidth(1.0)
-	ctx.DrawRoundedRectangle(x, y, w, h, 6)
-	ctx.Stroke()
+	uictx.DrawRoundedRectangle(x, y, w, h, 6)
+	uictx.Stroke()
 
 	// Text Settings
 	lineHeight := 18.0
@@ -108,20 +108,20 @@ func (d *DebugOverlay) Render(uictx *context.UIContext, x, y float64) (float64, 
 
 	// Draw Lines
 	ctx.SetColor(fpsColor)
-	ctx.DrawString(fmt.Sprintf("FPS:      %.1f", fps), startX, startY)
+	uictx.DrawString(fmt.Sprintf("FPS:      %.1f", fps), startX, startY)
 	
 	ctx.SetColor(color.RGBA{220, 220, 220, 255})
-	ctx.DrawString(fmt.Sprintf("Frame:    %.2f ms", frameTimeMs), startX, startY+lineHeight*1)
+	uictx.DrawString(fmt.Sprintf("Frame:    %.2f ms", frameTimeMs), startX, startY+lineHeight*1)
 	
 	ctx.SetColor(color.RGBA{150, 200, 255, 255})
-	ctx.DrawString(fmt.Sprintf("CPU Core: %d", d.numCPU), startX, startY+lineHeight*2)
+	uictx.DrawString(fmt.Sprintf("CPU Core: %d", d.numCPU), startX, startY+lineHeight*2)
 	
 	ctx.SetColor(color.RGBA{200, 150, 255, 255})
-	ctx.DrawString(fmt.Sprintf("Mem Sys:  %.1f MB", sysMemMB), startX, startY+lineHeight*3)
-	ctx.DrawString(fmt.Sprintf("Mem Allc: %.1f MB", allocMemMB), startX, startY+lineHeight*4)
+	uictx.DrawString(fmt.Sprintf("Mem Sys:  %.1f MB", sysMemMB), startX, startY+lineHeight*3)
+	uictx.DrawString(fmt.Sprintf("Mem Allc: %.1f MB", allocMemMB), startX, startY+lineHeight*4)
 	
 	ctx.SetColor(color.RGBA{220, 220, 220, 255})
-	ctx.DrawString(fmt.Sprintf("Goroutin: %d", numGoroutines), startX, startY+lineHeight*5)
+	uictx.DrawString(fmt.Sprintf("Goroutin: %d", numGoroutines), startX, startY+lineHeight*5)
 
 	return w, h
 }

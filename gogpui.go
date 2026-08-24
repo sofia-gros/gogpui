@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gogpu/gg"
+	_ "github.com/gogpu/gg/gpu" // Enable GPU acceleration
 	"github.com/gogpu/gg/integration/ggcanvas"
 	"github.com/gogpu/gg/text"
 	"github.com/gogpu/gogpu"
@@ -214,6 +215,8 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 	})
 
 	lastTime := time.Now()
+	var frameCount int
+	var lastFPSLog time.Time = time.Now()
 
 	app.OnDraw(func(dc *gogpu.Context) {
 		if canvas == nil {
@@ -253,6 +256,7 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 		targetScale.Store(newScale)
 
 		// --- リサイズ処理（レンダースレッド内で安全に適用）---
+		isResized := false
 		if tgtW != currentW || tgtH != currentH || newScale != lastScale {
 			currentW, currentH = tgtW, tgtH
 			lastScale = newScale
@@ -260,6 +264,7 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 				log.Printf("gogpui: canvas resize error: %v", err)
 			}
 			canvas.SetDeviceScale(lastScale)
+			isResized = true
 		}
 
 		now := time.Now()
@@ -274,9 +279,23 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 		}
 		in := app.Input()
 
-		// 背景クリア
-		ctx.SetColor(th.Colors.Background)
-		ctx.Clear()
+		// ダメージがあるか、初回フレームかを確認
+		hasDamage := uictx.NeedsRedraw || len(uictx.DamageRects) > 0 || isResized || frameCount == 0
+
+		if hasDamage {
+			// 背景クリア（フル再描画）
+			// TODO: 本当は DamageRects の範囲だけクリップしてクリアしたいが、まずはフル再描画で進める
+			ctx.SetColor(th.Colors.Background)
+			ctx.Clear()
+			uictx.LogicOnly = false
+		} else {
+			// ダメージがなければ、描画をスキップしてロジックだけ実行
+			uictx.LogicOnly = true
+		}
+
+		// 次のフレームでダメージ処理を行うため、この時点で現在のダメージ領域をクリア
+		uictx.DamageRects = uictx.DamageRects[:0]
+		uictx.NeedsRedraw = false
 
 		// フォントセット（ソースは起動時に一度だけロード済み）
 		if fontSource != nil {
@@ -306,26 +325,39 @@ func (a *App) Run(onDraw func(*context.UIContext)) {
 		}
 
 		// ユーザー定義の描画コールバックを呼び出す
+		var onDrawDur, renderDur time.Duration
 		if onDraw != nil {
+			startOnDraw := time.Now()
 			onDraw(uictx)
+			onDrawDur = time.Since(startOnDraw)
 		}
 
 		// canvas を GPU に転送する。
-		// NeedsRedraw または描画コールバックが実行された場合のみ MarkDirty して GPUアップロードを行う。
-		// 毎フレーム無条件に MarkDirty すると変化のないフレームで不要なアップロードが発生する。
-		if onDraw != nil {
+		// ダメージがあった場合のみアップロードを行う。
+		if onDraw != nil && !uictx.LogicOnly {
 			canvas.MarkDirty()
 		}
 		
+		startRender := time.Now()
 		if err := canvas.Render(dc.RenderTarget()); err != nil {
 			fmt.Println("gogpui: canvas.Render error:", err)
 			// 「gogpu: surface frame not available」などの過渡的エラー時は次フレームで確実に再試行する。
 			app.RequestRedraw()
 		}
+		renderDur = time.Since(startRender)
 
 		// アニメーション実行中は gogpu に VSync フルレート描画を要求する。
-		if uictx.NeedsRedraw {
+		// 次のフレームで描画が必要とマークされたら、すぐにRedraw要求
+		if len(uictx.DamageRects) > 0 || uictx.NeedsRedraw {
 			app.RequestRedraw()
+		}
+
+		frameCount++
+		if time.Since(lastFPSLog) >= time.Second {
+			fps := float64(frameCount) / time.Since(lastFPSLog).Seconds()
+			fmt.Printf("FPS: %.1f, dt: %.1fms (onDraw: %.1fms, canvas.Render: %.1fms)\n", fps, dt*1000, float64(onDrawDur.Microseconds())/1000.0, float64(renderDur.Microseconds())/1000.0)
+			frameCount = 0
+			lastFPSLog = time.Now()
 		}
 	})
 

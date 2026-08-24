@@ -21,15 +21,15 @@ func TestScroll_GoldenImages(t *testing.T) {
 			ctx := uictx.GG
 			ctx.SetColor(color.RGBA{255, 0, 0, 255})
 			ctx.DrawRectangle(x, y, 400, 200) // Top red box
-			ctx.Fill()
+			uictx.Fill()
 			
 			ctx.SetColor(color.RGBA{0, 255, 0, 255})
 			ctx.DrawRectangle(x, y+400, 400, 200) // Middle green box
-			ctx.Fill()
+			uictx.Fill()
 			
 			ctx.SetColor(color.RGBA{0, 0, 255, 255})
 			ctx.DrawRectangle(x, y+800, 400, 200) // Bottom blue box
-			ctx.Fill()
+			uictx.Fill()
 			
 			return 400, 1000
 		},

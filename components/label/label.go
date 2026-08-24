@@ -125,7 +125,7 @@ func (l *Label) Render(uictx *context.UIContext, x, y float64) (float64, float64
 		if seg.Text == "" {
 			continue
 		}
-		w, h := ctx.MeasureString(seg.Text)
+		w, h := uictx.MeasureText(seg.Text)
 		totalW += w
 		if h > totalH {
 			totalH = h
@@ -134,7 +134,7 @@ func (l *Label) Render(uictx *context.UIContext, x, y float64) (float64, float64
 
 	// Make totalH at least font size to keep height stable
 	if totalH == 0 {
-		_, totalH = ctx.MeasureString("Ag") 
+		_, totalH = uictx.MeasureText("Ag") 
 	}
 
 	if uictx.MeasureOnly {
@@ -148,10 +148,10 @@ func (l *Label) Render(uictx *context.UIContext, x, y float64) (float64, float64
 			continue
 		}
 		ctx.SetColor(seg.Color)
-		w, _ := ctx.MeasureString(seg.Text)
+		w, _ := uictx.MeasureText(seg.Text)
 		
 		// Draw anchored at left-center to align horizontally while keeping vertical middle
-		ctx.DrawStringAnchored(seg.Text, currentX, y+totalH/2.0, 0.0, 0.5)
+		uictx.DrawStringAnchored(seg.Text, currentX, y+totalH/2.0, 0.0, 0.5)
 		currentX += w
 	}
 

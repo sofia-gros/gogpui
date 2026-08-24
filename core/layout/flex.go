@@ -82,9 +82,15 @@ type Flex struct {
 	align    AlignItems
 	gap      float64
 	children []Widget
-	wrapMode WrapMode
-	maxW     float64 // 0 = 制約なし
-	maxH     float64 // 0 = 制約なし
+	wrapMode   WrapMode
+	maxW       float64 // 0 = 制約なし
+	maxH       float64 // 0 = 制約なし
+
+	// 内部キャッシュ（同一フレーム内での MeasureOnly の重複呼び出しを避けるため）
+	measured   bool
+	boxes      []childBox
+	measuredW  float64
+	measuredH  float64
 }
 
 // NewFlex はデフォルト設定（Row 方向）で新しい Flex コンテナを作成する。
@@ -165,23 +171,35 @@ type childBox struct {
 
 // renderNoWrap は折り返しなしのフレックスレイアウトを描画する。
 func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float64) {
-	// --- 1. 計測パス（GrowWidget は 0 として扱う）---
-	originalMeasure := uictx.MeasureOnly
-	uictx.MeasureOnly = true
+	if f.measured && uictx.MeasureOnly {
+		return f.measuredW, f.measuredH
+	}
 
 	n := len(f.children)
-	boxes := make([]childBox, n)
+	var maxMain float64
+	if f.dir == Row {
+		maxMain = f.maxW
+	} else {
+		maxMain = f.maxH
+	}
 	var nonGrowMainTotal, crossMax float64
 
-	for i, child := range f.children {
+	if !f.measured {
+		// --- 1. 計測パス（GrowWidget は 0 として扱う）---
+		originalMeasure := uictx.MeasureOnly
+		uictx.MeasureOnly = true
+
+		f.boxes = make([]childBox, n)
+
+		for i, child := range f.children {
 		// GrowWidget は計測時に 0 を返すことを期待するが、念のため 0 に固定する
-		if _, ok := child.(GrowWidget); ok {
-			boxes[i] = childBox{0, 0}
-			continue
-		}
-		cw, ch := child.Render(uictx, 0, 0)
-		boxes[i] = childBox{cw, ch}
-		var main, cross float64
+			if _, ok := child.(GrowWidget); ok {
+				f.boxes[i] = childBox{0, 0}
+				continue
+			}
+			cw, ch := child.Render(uictx, 0, 0)
+			f.boxes[i] = childBox{cw, ch}
+			var main, cross float64
 		if f.dir == Row {
 			main, cross = cw, ch
 		} else {
@@ -195,12 +213,6 @@ func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float6
 	uictx.MeasureOnly = originalMeasure
 
 	// --- 2. GrowWidget への残りスペース配分 ---
-	var maxMain float64
-	if f.dir == Row {
-		maxMain = f.maxW
-	} else {
-		maxMain = f.maxH
-	}
 
 	// grow が有効なのは maxMain が制約されているときのみ
 	if maxMain > 0 {
@@ -219,41 +231,70 @@ func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float6
 		}
 
 		// 各 GrowWidget に割り当てサイズをセットし、boxes を更新
-		if totalFactor > 0 {
-			for i, child := range f.children {
-				gw, ok := child.(GrowWidget)
-				if !ok {
-					continue
+			if totalFactor > 0 {
+				for i, child := range f.children {
+					gw, ok := child.(GrowWidget)
+					if !ok {
+						continue
+					}
+					allocMain := remaining * gw.GrowFactor() / totalFactor
+					var aw, ah float64
+					if f.dir == Row {
+						aw, ah = allocMain, 0
+					} else {
+						aw, ah = 0, allocMain
+					}
+					gw.SetAllocatedSize(aw, ah)
+					f.boxes[i] = childBox{aw, ah}
 				}
-				allocMain := remaining * gw.GrowFactor() / totalFactor
-				var aw, ah float64
-				if f.dir == Row {
-					aw, ah = allocMain, 0
-				} else {
-					aw, ah = 0, allocMain
-				}
-				gw.SetAllocatedSize(aw, ah)
-				boxes[i] = childBox{aw, ah}
 			}
 		}
-	}
 
-	// grow 後に交差軸の最大値を再計算
-	for _, box := range boxes {
-		var cross float64
+		// grow 後に交差軸の最大値を再計算
+		for _, box := range f.boxes {
+			var cross float64
+			if f.dir == Row {
+				cross = box.h
+			} else {
+				cross = box.w
+			}
+			if cross > crossMax {
+				crossMax = cross
+			}
+		}
+
+		// --- 3. 全体サイズの集計 ---
+		var rawMainTotal float64
+		for _, box := range f.boxes {
+			if f.dir == Row {
+				rawMainTotal += box.w
+			} else {
+				rawMainTotal += box.h
+			}
+		}
+		mainTotal := rawMainTotal
+		if n > 1 {
+			mainTotal += f.gap * float64(n-1)
+		}
+
 		if f.dir == Row {
-			cross = box.h
+			f.measuredW, f.measuredH = mainTotal, crossMax
 		} else {
-			cross = box.w
+			f.measuredW, f.measuredH = crossMax, mainTotal
 		}
-		if cross > crossMax {
-			crossMax = cross
-		}
+		f.measured = true
 	}
 
-	// --- 3. 全体サイズの集計 ---
+	w, h = f.measuredW, f.measuredH
+
+	// 親が計測中であれば早期リターン
+	if uictx.MeasureOnly {
+		return w, h
+	}
+
+	// 描画用の再集計（cursor, spacing用）
 	var rawMainTotal float64
-	for _, box := range boxes {
+	for _, box := range f.boxes {
 		if f.dir == Row {
 			rawMainTotal += box.w
 		} else {
@@ -263,17 +304,6 @@ func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float6
 	mainTotal := rawMainTotal
 	if n > 1 {
 		mainTotal += f.gap * float64(n-1)
-	}
-
-	if f.dir == Row {
-		w, h = mainTotal, crossMax
-	} else {
-		w, h = crossMax, mainTotal
-	}
-
-	// 親が計測中であれば早期リターン
-	if uictx.MeasureOnly {
-		return w, h
 	}
 
 	// maxMain の確定（grow 配分後の mainTotal を使う）
@@ -319,7 +349,7 @@ func (f *Flex) renderNoWrap(uictx *context.UIContext, x, y float64) (w, h float6
 
 	// --- 5. 描画パス ---
 	for i, child := range f.children {
-		box := boxes[i]
+		box := f.boxes[i]
 		var cx, cy float64
 
 		if f.dir == Row {
@@ -376,23 +406,29 @@ func (f *Flex) renderWrap(uictx *context.UIContext, x, y float64) (w, h float64)
 		maxMain = f.maxH
 	}
 
-	// --- 1. 計測パス ---
-	originalMeasure := uictx.MeasureOnly
-	uictx.MeasureOnly = true
-
-	allBoxes := make([]childBox, len(f.children))
-	for i, child := range f.children {
-		cw, ch := child.Render(uictx, 0, 0)
-		allBoxes[i] = childBox{cw, ch}
+	if f.measured && uictx.MeasureOnly {
+		return f.measuredW, f.measuredH
 	}
-	uictx.MeasureOnly = originalMeasure
+
+	if !f.measured {
+		// --- 1. 計測パス ---
+		originalMeasure := uictx.MeasureOnly
+		uictx.MeasureOnly = true
+
+		f.boxes = make([]childBox, len(f.children))
+		for i, child := range f.children {
+			cw, ch := child.Render(uictx, 0, 0)
+			f.boxes[i] = childBox{cw, ch}
+		}
+		uictx.MeasureOnly = originalMeasure
+	}
 
 	// --- 2. 行（または列）に分割する ---
 	var lines []lineInfo
 	lineStart := 0
 	var lineMain, lineCross float64
 
-	for i, box := range allBoxes {
+	for i, box := range f.boxes {
 		var itemMain, itemCross float64
 		if f.dir == Row {
 			itemMain, itemCross = box.w, box.h
@@ -441,23 +477,30 @@ func (f *Flex) renderWrap(uictx *context.UIContext, x, y float64) (w, h float64)
 	}
 
 	// --- 3. 全体サイズを計算 ---
-	var totalCross, totalMainMax float64
+	var totalCross, maxLineMain float64
 	for i, line := range lines {
 		totalCross += line.crossSize
 		if i > 0 {
 			totalCross += f.gap
 		}
-		if line.mainSize > totalMainMax {
-			totalMainMax = line.mainSize
+		if line.mainSize > maxLineMain {
+			maxLineMain = line.mainSize
 		}
 	}
 
 	if f.dir == Row {
-		w, h = totalMainMax, totalCross
+		w, h = maxLineMain, totalCross
 	} else {
-		w, h = totalCross, totalMainMax
+		w, h = totalCross, maxLineMain
 	}
 
+	if !f.measured {
+		f.measured = true
+		f.measuredW = w
+		f.measuredH = h
+	}
+
+	// 親が計測中の場合は早期リターン
 	if uictx.MeasureOnly {
 		return w, h
 	}

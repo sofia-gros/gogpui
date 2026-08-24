@@ -123,7 +123,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 		paddingX := 8.0
 
 		if s.label != "" {
-			textW, textH = ctx.MeasureString(s.label)
+			textW, textH = uictx.MeasureText(s.label)
 			totalLabelW = textW + paddingX*2
 			h = textH
 			if h < 16 {
@@ -152,7 +152,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 					ctx.SetDash(4, 2)
 				}
 				ctx.DrawLine(x, midY, x+leftLineW, midY)
-				_ = ctx.Stroke()
+				_ = uictx.Stroke()
 				if s.style == StyleDashed {
 					ctx.ClearDash()
 				}
@@ -161,7 +161,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 			// 中央ラベル
 			labelX := x + leftLineW + paddingX
 			ctx.SetColor(th.Colors.MutedForeground)
-			ctx.DrawString(s.label, labelX, y+(h+textH)/2.0-2.0)
+			uictx.DrawString(s.label, labelX, y+(h+textH)/2.0-2.0)
 
 			// 右側の線
 			rightLineStartX := x + leftLineW + totalLabelW
@@ -172,7 +172,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 					ctx.SetDash(4, 2)
 				}
 				ctx.DrawLine(rightLineStartX, midY, x+length, midY)
-				_ = ctx.Stroke()
+				_ = uictx.Stroke()
 				if s.style == StyleDashed {
 					ctx.ClearDash()
 				}
@@ -188,7 +188,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 			ctx.SetDash(4, 2)
 		}
 		ctx.DrawLine(x, y+0.5, x+length, y+0.5)
-		_ = ctx.Stroke()
+		_ = uictx.Stroke()
 		if s.style == StyleDashed {
 			ctx.ClearDash()
 		}
@@ -211,7 +211,7 @@ func (s *Separator) Render(uictx *context.UIContext, x, y float64) (float64, flo
 		ctx.SetDash(4, 2)
 	}
 	ctx.DrawLine(x+0.5, y, x+0.5, y+length)
-	_ = ctx.Stroke()
+	_ = uictx.Stroke()
 	if s.style == StyleDashed {
 		ctx.ClearDash()
 	}

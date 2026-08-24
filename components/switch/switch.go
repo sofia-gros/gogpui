@@ -114,7 +114,7 @@ func (s *Switch) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	// Calculate text width if label exists
 	var textW, textH float64
 	if s.label != "" {
-		textW, textH = ctx.MeasureString(s.label)
+		textW, textH = uictx.MeasureText(s.label)
 	}
 
 	gap := 8.0
@@ -190,9 +190,9 @@ func (s *Switch) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	}
 
 	// Draw Track
-	ctx.DrawRoundedRectangle(x, trackY, trackW, trackH, radius)
+	uictx.DrawRoundedRectangle(x, trackY, trackW, trackH, radius)
 	ctx.SetColor(bg)
-	ctx.Fill()
+	uictx.Fill()
 
 	// Switch thumb
 	thumbBg := th.Colors.Background
@@ -207,9 +207,9 @@ func (s *Switch) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	thumbX := x + inset + thumbOffset
 	thumbY := trackY + inset
 
-	ctx.DrawRoundedRectangle(thumbX, thumbY, actualThumbW, thumbSize, thumbSize/2.0)
+	uictx.DrawRoundedRectangle(thumbX, thumbY, actualThumbW, thumbSize, thumbSize/2.0)
 	ctx.SetColor(thumbBg)
-	ctx.Fill()
+	uictx.Fill()
 
 	// Draw Label
 	if s.label != "" {
@@ -219,7 +219,7 @@ func (s *Switch) Render(uictx *context.UIContext, x, y float64) (float64, float6
 		}
 		ctx.SetColor(textColor)
 		textX := x + trackW + gap
-		ctx.DrawStringAnchored(s.label, textX, centerY, 0.0, 0.5)
+		uictx.DrawStringAnchored(s.label, textX, centerY, 0.0, 0.5)
 	}
 
 	return totalW, totalH

@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"github.com/sofiagros/gogpui/core/context"
-	"github.com/gogpu/gg"
 )
 
 // BreadcrumbItem はパンくずリストの各項目を表す。
@@ -53,7 +52,8 @@ func (b *Breadcrumb) Add(items ...*BreadcrumbItem) *Breadcrumb {
 	return b
 }
 
-func drawChevronRight(ctx *gg.Context, x, y, size float64, c color.Color) {
+func drawChevronRight(uictx *context.UIContext, x, y, size float64, c color.Color) {
+	ctx := uictx.GG
 	ctx.SetColor(c)
 	ctx.SetLineWidth(1.5)
 	
@@ -63,7 +63,7 @@ func drawChevronRight(ctx *gg.Context, x, y, size float64, c color.Color) {
 	ctx.MoveTo(x-halfW, y-halfH)
 	ctx.LineTo(x+halfW, y)
 	ctx.LineTo(x-halfW, y+halfH)
-	ctx.Stroke()
+	uictx.Stroke()
 }
 
 // Render は指定位置に Breadcrumb を描画し、占有サイズ (幅, 高さ) を返す。
@@ -80,7 +80,7 @@ func (b *Breadcrumb) Render(uictx *context.UIContext, x, y float64) (float64, fl
 	// 計測パスと描画パスを統合するための計算
 	for i, item := range b.items {
 		// Label measurement
-		lblW, lblH := ctx.MeasureString(item.label)
+		lblW, lblH := uictx.MeasureText(item.label)
 		
 		if lblH > totalH {
 			totalH = lblH
@@ -107,7 +107,7 @@ func (b *Breadcrumb) Render(uictx *context.UIContext, x, y float64) (float64, fl
 	for i, item := range b.items {
 		isLast := (i == len(b.items)-1)
 		
-		lblW, _ := ctx.MeasureString(item.label)
+		lblW, _ := uictx.MeasureText(item.label)
 
 		// インタラクション処理
 		// isLast の場合でも onClick があればクリック可能とするのが一般的だが、
@@ -142,13 +142,13 @@ func (b *Breadcrumb) Render(uictx *context.UIContext, x, y float64) (float64, fl
 		// テキストの描画
 		ctx.SetColor(textColor)
 		// y座標はテキストのベースラインではなく中心(Anchored)として描画
-		ctx.DrawStringAnchored(item.label, currentX, centerY, 0.0, 0.5)
+		uictx.DrawStringAnchored(item.label, currentX, centerY, 0.0, 0.5)
 		currentX += lblW
 
 		// セパレーターの描画
 		if !isLast {
 			currentX += gap
-			drawChevronRight(ctx, currentX+iconSize/2.0, centerY, iconSize, th.Colors.MutedForeground)
+			drawChevronRight(uictx, currentX+gap/2, y+totalH/2, iconSize, th.Colors.MutedForeground)
 			currentX += iconSize + gap
 		}
 	}

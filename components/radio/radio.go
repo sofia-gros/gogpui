@@ -103,7 +103,7 @@ func (r *Radio) Render(uictx *context.UIContext, x, y float64) (float64, float64
 	// Calculate text width if label exists
 	var textW, textH float64
 	if r.label != "" {
-		textW, textH = ctx.MeasureString(r.label)
+		textW, textH = uictx.MeasureText(r.label)
 	}
 
 	gap := 8.0
@@ -187,7 +187,7 @@ func (r *Radio) Render(uictx *context.UIContext, x, y float64) (float64, float64
 	ctx.FillPreserve()
 	ctx.SetColor(borderColor)
 	ctx.SetLineWidth(lineW)
-	ctx.Stroke()
+	uictx.Stroke()
 
 	// Draw inner circle (dot) if checked
 	if r.checked {
@@ -203,7 +203,7 @@ func (r *Radio) Render(uictx *context.UIContext, x, y float64) (float64, float64
 
 		ctx.DrawCircle(centerX, centerY, dotRadius)
 		ctx.SetColor(dotColor)
-		ctx.Fill()
+		uictx.Fill()
 	}
 
 	// Draw Label
@@ -214,7 +214,7 @@ func (r *Radio) Render(uictx *context.UIContext, x, y float64) (float64, float64
 		}
 		ctx.SetColor(textColor)
 		textX := x + boxSize + gap
-		ctx.DrawStringAnchored(r.label, textX, centerY-yOffset, 0.0, 0.5) // align label correctly if shifted
+		uictx.DrawStringAnchored(r.label, textX, centerY-yOffset, 0.0, 0.5) // align label correctly if shifted
 	}
 
 	return totalW, totalH

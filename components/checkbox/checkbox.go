@@ -116,7 +116,7 @@ func (c *Checkbox) Render(uictx *context.UIContext, x, y float64) (float64, floa
 	// Calculate text width if label exists
 	var textW, textH float64
 	if c.label != "" {
-		textW, textH = ctx.MeasureString(c.label)
+		textW, textH = uictx.MeasureText(c.label)
 	}
 
 	gap := 8.0
@@ -201,12 +201,12 @@ func (c *Checkbox) Render(uictx *context.UIContext, x, y float64) (float64, floa
 	if lineW < 1.0 {
 		lineW = 1.0
 	}
-	ctx.DrawRoundedRectangle(x, boxY, boxSize, boxSize, radius)
+	uictx.DrawRoundedRectangle(x, boxY, boxSize, boxSize, radius)
 	ctx.SetColor(bgColor)
 	ctx.FillPreserve()
 	ctx.SetColor(borderColor)
 	ctx.SetLineWidth(lineW)
-	ctx.Stroke()
+	uictx.Stroke()
 
 	// Draw Checkmark
 	if c.checked {
@@ -219,7 +219,7 @@ func (c *Checkbox) Render(uictx *context.UIContext, x, y float64) (float64, floa
 		ctx.MoveTo(x+boxSize*0.25, boxY+boxSize*0.55)
 		ctx.LineTo(x+boxSize*0.45, boxY+boxSize*0.75)
 		ctx.LineTo(x+boxSize*0.75, boxY+boxSize*0.3)
-		ctx.Stroke()
+		uictx.Stroke()
 	}
 
 	// Draw Label
@@ -230,7 +230,7 @@ func (c *Checkbox) Render(uictx *context.UIContext, x, y float64) (float64, floa
 		}
 		ctx.SetColor(textColor)
 		textX := x + boxSize + gap
-		ctx.DrawStringAnchored(c.label, textX, centerY, 0.0, 0.5)
+		uictx.DrawStringAnchored(c.label, textX, centerY, 0.0, 0.5)
 	}
 
 	return totalW, totalH

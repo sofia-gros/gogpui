@@ -38,6 +38,7 @@ type WidgetState struct {
 	ValueRatio   float64 // 0.0 to 1.0 (or custom range) for progress/slider animations
 	OffsetY      float64 // Persistent scroll offset
 	IsDragging   bool
+	CustomData   any     // Allows components to store custom persistent state
 }
 
 // ClipRect represents a clipping region for culling.
@@ -60,7 +61,14 @@ type UIContext struct {
 	WindowHeight float64
 	States       map[string]*WidgetState
 	MeasureOnly  bool
+	LogicOnly    bool
 	NeedsRedraw  bool
+	
+	// Text measurement cache to avoid massive CPU usage from FreeType
+	measureCache map[string]struct{ w, h float64 }
+	
+	// DamageRects は今フレームで再描画が必要とマークされた領域のリスト
+	DamageRects  []image.Rectangle
 	
 	// Window はOSウィンドウへの操作を提供します。
 	Window WindowControl
@@ -92,11 +100,14 @@ func (c *UIContext) Update(ggCtx *gg.Context, th *theme.Theme, dt float64, in *i
 	c.WindowWidth = windowW
 	c.WindowHeight = windowH
 	c.MeasureOnly = false // デフォルトは描画モード
+	c.LogicOnly = false
 	c.NeedsRedraw = false // フレーム開始時にリセット
 	
 	c.dragMu.Lock()
 	c.dragRegions = c.dragRegions[:0] // フレーム開始時にドラッグ領域をリセット
 	c.dragMu.Unlock()
+	
+	// ダメージ矩形は毎フレームリセットしない（描画完了時＝EndFrame または gogpui.go 側でリセットする）
 
 	if in != nil {
 		mx, my := in.Mouse().Position()
@@ -169,11 +180,38 @@ func (c *UIContext) PushClip(x, y, w, h float64) {
 	c.clipStack = append(c.clipStack, ClipRect{X: nx, Y: ny, W: nw, H: nh})
 }
 
-// PopClip removes the top clipping region from the stack.
+// PopClip removes the top clipping region.
 func (c *UIContext) PopClip() {
 	if len(c.clipStack) > 0 {
 		c.clipStack = c.clipStack[:len(c.clipStack)-1]
+		c.GG.ResetClip() // Pop the gg clip
+		// Re-apply all remaining clips in the stack
+		for _, rect := range c.clipStack {
+			c.GG.DrawRectangle(rect.X, rect.Y, rect.W, rect.H)
+			c.GG.Clip()
+		}
 	}
+}
+
+// MarkDamaged は指定された矩形領域（物理座標または論理座標、必要に応じて調整）をダーティとしてマークします。
+func (c *UIContext) MarkDamaged(x, y, w, h float64) {
+	rect := image.Rect(int(x), int(y), int(x+w), int(y+h))
+	c.DamageRects = append(c.DamageRects, rect)
+	c.NeedsRedraw = true
+}
+
+// MeasureText はテキストのレンダリングサイズを計測し、キャッシュして返します。
+// FreeTypeのMeasureString呼び出しは非常に重いため、同一フレーム/複数フレーム間での再計算を劇的に削減します。
+func (c *UIContext) MeasureText(text string) (w, h float64) {
+	if c.measureCache == nil {
+		c.measureCache = make(map[string]struct{ w, h float64 })
+	}
+	if size, ok := c.measureCache[text]; ok {
+		return size.w, size.h
+	}
+	w, h = c.GG.MeasureString(text)
+	c.measureCache[text] = struct{ w, h float64 }{w, h}
+	return w, h
 }
 
 // CurrentClip returns the current active clipping region.
@@ -229,6 +267,12 @@ func (c *UIContext) ProcessInteraction(id string, x, y, w, h float64, disabled b
 		}
 	}
 
+	// Keep track of old state to detect changes
+	oldHover := state.IsHovered
+	oldActive := state.IsActive
+	oldHoverRatio := state.HoverRatio
+	oldActiveRatio := state.ActiveRatio
+
 	// Update state
 	state.IsHovered = isHovered
 	state.IsActive = isActive
@@ -245,6 +289,14 @@ func (c *UIContext) ProcessInteraction(id string, x, y, w, h float64, disabled b
 		targetActive = 1.0
 	}
 	state.ActiveRatio = c.Animate(state.ActiveRatio, targetActive, 15.0)
+
+	// If anything changed or is animating, mark this widget's area as damaged!
+	isAnimating := state.HoverRatio != targetHover || state.ActiveRatio != targetActive
+	stateChanged := isHovered != oldHover || isActive != oldActive || state.HoverRatio != oldHoverRatio || state.ActiveRatio != oldActiveRatio
+	
+	if isAnimating || stateChanged {
+		c.MarkDamaged(x, y, w, h)
+	}
 
 	return isHovered, isActive, isClicked
 }
@@ -264,4 +316,42 @@ func (c *UIContext) AddDragRegion(rect image.Rectangle) {
 	c.dragMu.Lock()
 	defer c.dragMu.Unlock()
 	c.dragRegions = append(c.dragRegions, rect)
+}
+// Render wrappers to support LogicOnly bypassing
+
+func (c *UIContext) Fill() error {
+	if c.LogicOnly {
+		c.GG.ClearPath()
+		return nil
+	}
+	return c.GG.Fill()
+}
+
+func (c *UIContext) Stroke() error {
+	if c.LogicOnly {
+		c.GG.ClearPath()
+		return nil
+	}
+	return c.GG.Stroke()
+}
+
+func (c *UIContext) DrawString(s string, x, y float64) {
+	if c.LogicOnly {
+		return
+	}
+	c.GG.DrawString(s, x, y)
+}
+
+func (c *UIContext) DrawStringAnchored(s string, x, y, ax, ay float64) {
+	if c.LogicOnly {
+		return
+	}
+	c.GG.DrawStringAnchored(s, x, y, ax, ay)
+}
+
+func (c *UIContext) DrawRoundedRectangle(x, y, w, h, r float64) {
+	if c.LogicOnly {
+		return // Path will be cleared by Fill/Stroke, but better to avoid building it
+	}
+	c.GG.DrawRoundedRectangle(x, y, w, h, r)
 }

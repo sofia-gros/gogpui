@@ -132,8 +132,8 @@ func (s *Scroll) Render(uictx *context.UIContext, x, y float64) (float64, float6
 		thumbY := y + (availH * scrollRatio)
 
 		ctx.SetColor(uictx.Theme.Colors.Border)
-		ctx.DrawRoundedRectangle(barX, thumbY, barW, thumbH, 3)
-		_ = ctx.Fill()
+		uictx.DrawRoundedRectangle(barX, thumbY, barW, thumbH, 3)
+		_ = uictx.Fill()
 	}
 
 	return s.width, s.height

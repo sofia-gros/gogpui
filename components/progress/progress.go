@@ -125,8 +125,8 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 		A: uint8(255 / 5),
 	}
 	ctx.SetColor(trackColor)
-	ctx.DrawRoundedRectangle(x, y, w, barH, radius)
-	_ = ctx.Fill()
+	uictx.DrawRoundedRectangle(x, y, w, barH, radius)
+	_ = uictx.Fill()
 
 	// インジケーター描画
 	ctx.SetColor(primaryColor)
@@ -162,8 +162,8 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 				drawX = x + w - drawW
 			}
 
-			ctx.DrawRoundedRectangle(drawX, y, drawW, barH, radius)
-			_ = ctx.Fill()
+			uictx.DrawRoundedRectangle(drawX, y, drawW, barH, radius)
+			_ = uictx.Fill()
 		}
 	} else {
 		state := uictx.GetState(p.id)
@@ -176,7 +176,7 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 
 			if state.ValueRatio >= 100.0 {
 				// 100%時は両端角丸
-				ctx.DrawRoundedRectangle(x, y, indicatorW, barH, radius)
+				uictx.DrawRoundedRectangle(x, y, indicatorW, barH, radius)
 			} else {
 				// 100%未満の場合は右端を角丸にしない (rounded_r_none)
 				if indicatorW <= radius {
@@ -192,7 +192,7 @@ func (p *Progress) Render(uictx *context.UIContext, x, y float64) (float64, floa
 					ctx.ClosePath()
 				}
 			}
-			_ = ctx.Fill()
+			_ = uictx.Fill()
 		}
 	}
 
@@ -317,7 +317,7 @@ func (c *ProgressCircle) Render(uictx *context.UIContext, x, y float64) (float64
 	ctx.SetColor(trackColor)
 	ctx.SetLineWidth(stroke)
 	ctx.DrawArc(cx, cy, actualRadius, 0, math.Pi*2)
-	_ = ctx.Stroke()
+	_ = uictx.Stroke()
 
 	// インジケーター円弧描画
 	ctx.SetColor(primaryColor)
@@ -342,7 +342,7 @@ func (c *ProgressCircle) Render(uictx *context.UIContext, x, y float64) (float64
 		endAngle := -math.Pi/2.0 + (end/100.0)*math.Pi*2.0
 		if endAngle > startAngle {
 			ctx.DrawArc(cx, cy, actualRadius, startAngle, endAngle)
-			_ = ctx.Stroke()
+			_ = uictx.Stroke()
 		}
 	} else {
 		state := uictx.GetState(c.id)
@@ -351,7 +351,7 @@ func (c *ProgressCircle) Render(uictx *context.UIContext, x, y float64) (float64
 			startAngle := -math.Pi / 2.0
 			endAngle := startAngle + (state.ValueRatio/100.0)*math.Pi*2.0
 			ctx.DrawArc(cx, cy, actualRadius, startAngle, endAngle)
-			_ = ctx.Stroke()
+			_ = uictx.Stroke()
 		}
 	}
 

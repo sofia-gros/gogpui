@@ -174,7 +174,7 @@ func (a *Avatar) Render(uictx *context.UIContext, x, y float64) (float64, float6
 		// 背景描画
 		ctx.SetColor(bgColor)
 		ctx.DrawCircle(cx, cy, radius)
-		_ = ctx.Fill()
+		_ = uictx.Fill()
 
 		// テキスト描画
 		ctx.SetColor(textColor)
@@ -184,7 +184,7 @@ func (a *Avatar) Render(uictx *context.UIContext, x, y float64) (float64, float6
 		ctx.Translate(cx, cy)
 		ctx.Scale(scaleRatio, scaleRatio)
 		ctx.Translate(-cx, -cy)
-		ctx.DrawStringAnchored(a.shortName, cx, cy, 0.5, 0.5)
+		uictx.DrawStringAnchored(a.shortName, cx, cy, 0.5, 0.5)
 		ctx.Pop()
 
 	} else {
@@ -199,7 +199,7 @@ func (a *Avatar) Render(uictx *context.UIContext, x, y float64) (float64, float6
 
 		ctx.SetColor(borderColor)
 		ctx.SetLineWidth(1.0)
-		_ = ctx.Stroke()
+		_ = uictx.Stroke()
 
 		// Icon::User の代わりに "U" を描画する
 		ctx.SetColor(textColor)
@@ -208,7 +208,7 @@ func (a *Avatar) Render(uictx *context.UIContext, x, y float64) (float64, float6
 		ctx.Translate(cx, cy)
 		ctx.Scale(scaleRatio, scaleRatio)
 		ctx.Translate(-cx, -cy)
-		ctx.DrawStringAnchored("U", cx, cy, 0.5, 0.5)
+		uictx.DrawStringAnchored("U", cx, cy, 0.5, 0.5)
 		ctx.Pop()
 	}
 

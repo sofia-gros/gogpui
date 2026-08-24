@@ -161,16 +161,16 @@ func (s *Slider) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	}
 
 	// Draw Track (Unfilled part)
-	ctx.DrawRoundedRectangle(x, trackY, trackW, trackH, radius)
+	uictx.DrawRoundedRectangle(x, trackY, trackW, trackH, radius)
 	ctx.SetColor(bg2)
-	ctx.Fill()
+	uictx.Fill()
 
 	// Draw Track (Filled part)
 	filledW := trackW * currentVal
 	if filledW > 0 {
-		ctx.DrawRoundedRectangle(x, trackY, filledW, trackH, radius)
+		uictx.DrawRoundedRectangle(x, trackY, filledW, trackH, radius)
 		ctx.SetColor(bg1)
-		ctx.Fill()
+		uictx.Fill()
 	}
 
 	// Thumb animation
@@ -208,7 +208,7 @@ func (s *Slider) Render(uictx *context.UIContext, x, y float64) (float64, float6
 	ctx.FillPreserve()
 	ctx.SetColor(thumbBorder)
 	ctx.SetLineWidth(2.0)
-	ctx.Stroke()
+	uictx.Stroke()
 
 	return totalW, totalH
 }

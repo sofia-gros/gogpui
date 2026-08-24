@@ -125,7 +125,7 @@ func (b *Button) Render(uictx *context.UIContext, x, y float64) (w, h float64) {
 	_ = py // Keep py for layout engine in the future
 
 	// Measure text bounds
-	textW, _ := ctx.MeasureString(b.label)
+	textW, _ := uictx.MeasureText(b.label)
 
 	// Calculate width and height
 	w = textW + (px * 2)
@@ -187,18 +187,18 @@ func (b *Button) Render(uictx *context.UIContext, x, y float64) (w, h float64) {
 
 	// Draw button background
 	ctx.SetColor(bg)
-	ctx.DrawRoundedRectangle(x, y+yOffset, w, h, float64(th.Radius))
-	ctx.Fill()
+	uictx.DrawRoundedRectangle(x, y+yOffset, w, h, float64(th.Radius))
+	uictx.Fill()
 
 	if b.variant == Default {
 		ctx.SetColor(th.Colors.Border)
-		ctx.DrawRoundedRectangle(x, y+yOffset, w, h, float64(th.Radius))
-		ctx.Stroke()
+		uictx.DrawRoundedRectangle(x, y+yOffset, w, h, float64(th.Radius))
+		uictx.Stroke()
 	}
 
 	// Draw text
 	ctx.SetColor(fg)
-	ctx.DrawStringAnchored(b.label, x+w/2, y+h/2+yOffset, 0.5, 0.5)
+	uictx.DrawStringAnchored(b.label, x+w/2, y+h/2+yOffset, 0.5, 0.5)
 
 	// Draw underline for link on hover
 	if b.variant == Link && state.HoverRatio > 0 {
@@ -206,7 +206,7 @@ func (b *Button) Render(uictx *context.UIContext, x, y float64) (w, h float64) {
 		lineWidth := 1.0
 		ctx.SetLineWidth(lineWidth)
 		ctx.DrawLine(x, y+h-4+yOffset, x+w, y+h-4+yOffset)
-		ctx.Stroke()
+		uictx.Stroke()
 	}
 
 	return w, h

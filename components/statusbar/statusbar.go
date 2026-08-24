@@ -84,12 +84,12 @@ func (s *StatusBar) Render(uictx *context.UIContext, x, y float64) (float64, flo
 	// 背景描画
 	ctx.SetColor(th.Colors.Background) // Status bar BG (通常は少し暗いかBackgroundと同色)
 	ctx.DrawRectangle(x, y, s.width, barH)
-	_ = ctx.Fill()
+	_ = uictx.Fill()
 
 	// 上部ボーダー描画 (border_t_1)
 	ctx.SetColor(th.Colors.Border)
 	ctx.DrawRectangle(x, y, s.width, 1.0)
-	_ = ctx.Fill()
+	_ = uictx.Fill()
 
 	// メインのコンテナ (横幅から左右のパディングを引いた領域)
 	mainW := s.width - (px * 2)

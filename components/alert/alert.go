@@ -175,14 +175,14 @@ func (a *Alert) Render(uictx *context.UIContext, x, y float64) (float64, float64
 
 	// 背景描画
 	ctx.SetColor(bgColor)
-	ctx.DrawRoundedRectangle(x, y, a.width, totalH, 6)
-	_ = ctx.Fill()
+	uictx.DrawRoundedRectangle(x, y, a.width, totalH, 6)
+	_ = uictx.Fill()
 
 	// 枠線描画
 	ctx.SetColor(borderColor)
 	ctx.SetLineWidth(1)
-	ctx.DrawRoundedRectangle(x, y, a.width, totalH, 6)
-	_ = ctx.Stroke()
+	uictx.DrawRoundedRectangle(x, y, a.width, totalH, 6)
+	_ = uictx.Stroke()
 
 	// コンテンツ描画
 	mainFlex.Render(uictx, x+pad, y+pad)

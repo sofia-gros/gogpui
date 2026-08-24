@@ -145,10 +145,10 @@ func (w *mockTextWidget) Render(uictx *context.UIContext, x, y float64) (float64
 	if !uictx.MeasureOnly {
 		ctx.SetColor(w.bg)
 		ctx.DrawRectangle(x, y, width, height)
-		ctx.Fill()
+		uictx.Fill()
 
 		ctx.SetColor(color.Black)
-		ctx.DrawString(w.label, x+w.padding+4, y+height/2+4)
+		uictx.DrawString(w.label, x+w.padding+4, y+height/2+4)
 	}
 
 	return width, height
